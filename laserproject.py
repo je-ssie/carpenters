@@ -8,6 +8,8 @@ Created on Tue Mar 24 15:42:30 2026.
 
 
 from itertools import permutations
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
 
 class Block:
@@ -45,8 +47,7 @@ class Block:
         self.position = new_pos
 
     def __repr__(self):
-        # delete/edit later, used to check block_grid
-        return f"{type(self)}"
+        return f"{self.type}"
 
 
 """
@@ -150,6 +151,9 @@ class Puzzle:
         # target positions for solution (list of tuples)
         self.goal_coords = []
 
+        # read in the file
+        self.read_bff(file)
+
     def read_bff(self, file):
         # read in .bff and assign attributes
         # initialize attributes
@@ -176,8 +180,9 @@ class Puzzle:
 
             # loop through the block_grid and replace the string rep with objects
             # add all the blocks (reflect, refract, opaque) to the blocks list
-            for i in range(len(block_grid)):
-                for j in range(len(block_grid)):
+            for i in range(len(block_grid)):   # row
+                for j in range(len(block_grid[0])):   # column
+
                     block = block_grid[i][j]
 
                     if block == 'x':
@@ -329,7 +334,71 @@ class Puzzle:
 
         pass
 
+    def __str__(self):
+        # might delete, feels useless
+        grid_str = ""   # initialize str for grid
+
+        for row in self.block_grid:   # loop through all blocks in the grid
+            row_str = ""   # intialize str for row
+
+            for col in row:   # add o for empty space or type of block
+                if col is None:
+                    row_str += "o "
+                else:
+                    row_str += f"{col.type} "
+
+            grid_str += row_str.strip() + "\n"   # add row to grid
+
+        return grid_str
+
+    def draw_puzzle(self):
+        fig, ax = plt.subplots()
+
+        rows = len(self.block_grid)
+        cols = len(self.block_grid[0])
+
+        # plot grid lines
+        for i in range(rows + 1):
+            ax.plot([0, cols], [i, i], linewidth=0.5, color="black")
+        for j in range(cols + 1):
+            ax.plot([j, j], [0, rows], linewidth=0.5, color="black")
+
+        # plot blocks
+        for i in range(rows):
+            for j in range(cols):
+                b = self.block_grid[i][j]   # get the block at that coordinate
+
+                if b is not None:   # if there is a block present
+                    if b.type == "A":
+                        color = 'whitesmoke'
+                    elif b.type == "B":
+                        color = 'darkgrey'
+                    elif b.type == "C":
+                        color = 'whitesmoke'
+                    elif:
+                        
+                    else:
+                        color = 'dimgrey'
+
+                    rect = patches.Rectangle((j, rows - i - 1), 1, 1,
+                                             linewidth=1, edgecolor="black", facecolor=color)
+                    ax.add_patch(rect)
+        
+        for path in self.laser_pos:
+            x = [p[0] for p in path]
+            y = [p[1] for p in path]
+            
+            ax.plot(x, y, linewidth=2, color='red')
+            
+        ax.set_xlim(0, cols)
+        ax.set_ylim(0, rows)
+        plt.axis('off')
+        plt.title(f"{self.file[:-4]}")
+        plt.show()
+
+
 
 if __name__ == "__main__":
     p = Puzzle('mad_7.bff')
-    p.read_bff('mad_7.bff')
+    print(p)
+    print(p.draw_puzzle())
