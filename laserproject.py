@@ -386,14 +386,25 @@ class Puzzle:
                 if b is not None:   # if there is a block present
                     if b.type == "A":   # reflect
                         color = "whitesmoke"
+                        line_color = 'black'
+                        order = 2
                     elif b.type == "B":   # opaque
                         color = 'dimgrey'
+                        line_color = 'black'
+                        order = 2
                     elif b.type == "C":   # refract
                         color = 'lightgrey'
+                        line_color = 'black'
+                        order = 2
+                    elif b.type == "x":   # block not allowed
+                        color = 'darkgrey'
+                        line_color = 'gray'
+                        order = 1
+
                     rect = patches.Rectangle((j * 2, (rows - i - 1) * 2), 2, 2,
-                                             linewidth=3,
-                                             edgecolor="black",
-                                             facecolor=color, zorder=2)
+                                             linewidth=5,
+                                             edgecolor=line_color,
+                                             facecolor=color, zorder=order)
 
                 else:
                     color = 'darkgrey'
@@ -413,7 +424,7 @@ class Puzzle:
             x = [p[0] for p in pos]
             y = [rows * 2 - p[1] for p in pos]
 
-            ax.scatter(x, y, linewidth=2, color='red')
+            ax.scatter(x, y, linewidth=2, color='red', zorder=4)
 
         # TODO: need to add laser directions
 
@@ -449,9 +460,9 @@ if __name__ == "__main__":
     filenames = ['dark_1.bff', 'mad_1.bff', 'mad_4.bff', 'mad_7.bff',
                  'numbered_6.bff', 'showstopper_4.bff', 'tiny_5.bff',
                  'yarn_5.bff']
-    p = Puzzle(filenames[5])
-    p.block_grid = [[None, None, None, Reflect((3, 0), True)],
-                    [None, None, None, None],
-                    [None, None, None, Opaque((3, 2), True)],
-                    [None, None, Reflect((2, 3), True), None]]
+    p = Puzzle(filenames[7])
+    # p.block_grid = [[None, None, None, Reflect((3, 0), True)],
+    #                 [None, None, None, None],
+    #                 [None, None, None, Opaque((3, 2), True)],
+    #                 [None, None, Reflect((2, 3), True), None]]
     p.draw_puzzle()
