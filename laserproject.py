@@ -273,8 +273,18 @@ class Puzzle:
         return
 
     def check_solved(self, laser_pos):
-        # TODO: check if all of goal coordinates are present in laser_pos
-        return
+        all_laser_pos = set()
+
+        # add all the coordinates from all laser paths into one set
+        for path in laser_pos:
+            for coord in path:
+                all_laser_pos.add(coord)
+
+        # check if all goal coordinates are present in laser_pos
+        for coord in self.goal_coords:
+            if coord not in all_laser_pos:
+                return False
+        return True
 
     def solve_puzzle(self):
         # all permutations of block placements
@@ -354,7 +364,7 @@ class Puzzle:
 
         return grid_str
 
-    def draw_puzzle(self):
+    def draw_puzzle(self, solved=False):
         fig, ax = plt.subplots()
 
         rows = len(self.block_grid)
@@ -381,10 +391,9 @@ class Puzzle:
                     elif b.type == "C":   # refract
                         color = 'lightgrey'
                     rect = patches.Rectangle((j * 2, (rows - i - 1) * 2), 2, 2,
-                                                 linewidth=3, 
-                                                 edgecolor="black",
-                                                 facecolor=color, zorder=2)
-
+                                             linewidth=3,
+                                             edgecolor="black",
+                                             facecolor=color, zorder=2)
 
                 else:
                     color = 'darkgrey'
@@ -392,40 +401,55 @@ class Puzzle:
                                              linewidth=5, edgecolor="gray",
                                              facecolor=color)
                 ax.add_patch(rect)
-        
+
         # plot goal coordinates
         x_goal = [coords[0] for coords in self.goal_coords]
         y_goal = [rows * 2 - coords[1] for coords in self.goal_coords]
 
-        ax.scatter(x_goal, y_goal, color = "black", s=100, zorder=3)
-        
+        ax.scatter(x_goal, y_goal, color="black", s=100, zorder=3)
+
         # plot laser starting points
         for i, pos in enumerate(self.laser_pos):
             x = [p[0] for p in pos]
             y = [rows * 2 - p[1] for p in pos]
-            
+
             ax.scatter(x, y, linewidth=2, color='red')
-        
-        # TO DO: need to add laser directions
-        
+
+        # TODO: need to add laser directions
+
         ax.set_xlim(-1, cols * 2 + 1)
         ax.set_ylim(-1, rows * 2 + 1)
+        ax.set_aspect('equal')
         plt.axis('off')
-        
-        legend_elements = [patches.Patch(facecolor='whitesmoke', edgecolor='black', label='Reflect block'),
-                           patches.Patch(facecolor='dimgrey', edgecolor='black', label='Opaque block'),
-                           patches.Patch(facecolor='lightgrey', edgecolor='black', label='Refract block'),
-                           patches.Patch(facecolor='darkgrey', edgecolor='black', label='No block'),]
-        #ax.legend(handles=legend_elements, loc='lower right')
-        
+
+        legend_elements = [patches.Patch(facecolor='whitesmoke',
+                                         edgecolor='black',
+                                         label='Reflect block'),
+                           patches.Patch(facecolor='dimgrey',
+                                         edgecolor='black',
+                                         label='Opaque block'),
+                           patches.Patch(facecolor='lightgrey',
+                                         edgecolor='black',
+                                         label='Refract block'),
+                           patches.Patch(facecolor='darkgrey',
+                                         edgecolor='black',
+                                         label='No block'),]
+        # ax.legend(handles=legend_elements, loc='lower right')
+
         plt.title(f"{self.file[:-4]}")
-        
+
+        if solved:
+            plt.savefig(f"{self.file} solved.png")
+
         plt.show()
 
 
 
 if __name__ == "__main__":
-    p = Puzzle('mad_1.bff')
+    filenames = ['dark_1.bff', 'mad_1.bff', 'mad_4.bff', 'mad_7.bff',
+                 'numbered_6.bff', 'showstopper_4.bff', 'tiny_5.bff',
+                 'yarn_5.bff']
+    p = Puzzle(filenames[5])
     p.block_grid = [[None, None, None, Reflect((3, 0), True)],
                     [None, None, None, None],
                     [None, None, None, Opaque((3, 2), True)],
