@@ -397,7 +397,7 @@ class Puzzle:
                         line_color = 'black'
                         order = 2
                     elif b.type == "x":   # block not allowed
-                        color = 'darkgrey'
+                        color = 'gray'
                         line_color = 'gray'
                         order = 1
 
@@ -428,7 +428,7 @@ class Puzzle:
 
         # TODO: need to add laser directions
 
-        ax.set_xlim(-1, cols * 2 + 1)
+        ax.set_xlim(-1, cols * 2 + 8)
         ax.set_ylim(-1, rows * 2 + 1)
         ax.set_aspect('equal')
         plt.axis('off')
@@ -444,8 +444,11 @@ class Puzzle:
                                          label='Refract block'),
                            patches.Patch(facecolor='darkgrey',
                                          edgecolor='black',
-                                         label='No block'),]
-        # ax.legend(handles=legend_elements, loc='lower right')
+                                         label='No block'),
+                           patches.Patch(facecolor='gray',
+                                         edgecolor='black',
+                                         label='No block allowed')]
+        ax.legend(handles=legend_elements, loc='center right')
 
         plt.title(f"{self.file[:-4]}")
 
@@ -466,3 +469,4 @@ if __name__ == "__main__":
     #                 [None, None, None, Opaque((3, 2), True)],
     #                 [None, None, Reflect((2, 3), True), None]]
     p.draw_puzzle()
+    # print(p)
