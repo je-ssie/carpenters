@@ -322,6 +322,9 @@ class Puzzle:
                             elif block.type == "C":
                                 laser_pos.append(laser_pos[i][:])
                                 laser_dir.append(new_dir[1])
+                            elif block.type == "x":
+                                laser_pos.append(laser_pos[i][:])
+                                laser_dir.append(new_dir[1])
 
                 # check if all lasers reached the end
                 complete = all(d is None for d in laser_dir)
@@ -359,9 +362,11 @@ class Puzzle:
 
         # plot grid lines
         for i in range(rows + 1):
-            ax.plot([0, cols], [i, i], linewidth=0.5, color="black")
+            ax.plot([0, cols * 2], [i * 2, i * 2], linewidth=5, color="gray",
+                    zorder=1)
         for j in range(cols + 1):
-            ax.plot([j, j], [0, rows], linewidth=0.5, color="black")
+            ax.plot([j * 2, j * 2], [0, rows * 2], linewidth=5, color="gray",
+                    zorder=1)
 
         # plot blocks
         for i in range(rows):
@@ -369,43 +374,48 @@ class Puzzle:
                 b = self.block_grid[i][j]   # get the block at that coordinate
 
                 if b is not None:   # if there is a block present
-                    if b.type == "A":
-                        color = 'blue'
-                    elif b.type == "B":
-                        color = 'darkgrey'
-                    elif b.type == "C":
-                        color = 'whitesmoke'
-                    elif b.type == "x":
-                        color = 'red'
-                else:
-                    color = 'dimgrey'
+                    if b.type == "A":   # reflect
+                        color = "whitesmoke"
+                    elif b.type == "B":   # opaque
+                        color = 'dimgrey'
+                    elif b.type == "C":   # refract
+                        color = 'lightgrey'
+                    rect = patches.Rectangle((j * 2, (rows - i - 1) * 2), 2, 2,
+                                                 linewidth=3, 
+                                                 edgecolor="black",
+                                                 facecolor=color, zorder=2)
 
-                rect = patches.Rectangle((j, rows - i - 1), 1, 1,
-                                             linewidth=1, edgecolor="black", facecolor=color)
+
+                else:
+                    color = 'darkgrey'
+                    rect = patches.Rectangle((j * 2, (rows - i - 1) * 2), 2, 2,
+                                             linewidth=5, edgecolor="gray",
+                                             facecolor=color)
                 ax.add_patch(rect)
         
         # plot goal coordinates
         x_goal = [coords[0] for coords in self.goal_coords]
-        y_goal = [coords[1] for coords in self.goal_coords]
+        y_goal = [rows * 2 - coords[1] for coords in self.goal_coords]
 
-        ax.scatter(x_goal, y_goal, color = "gold")
+        ax.scatter(x_goal, y_goal, color = "black", s=100, zorder=3)
         
-        # plot lasers
+        # plot laser starting points
         for i, pos in enumerate(self.laser_pos):
             x = [p[0] for p in pos]
-            y = [p[1] for p in pos]
+            y = [rows * 2 - p[1] for p in pos]
             
-            ax.plot(x, y, linewidth=2, color='red')
-            
-        ax.set_xlim(0, cols)
-        ax.set_ylim(0, rows)
-        #plt.axis('off')
+            ax.scatter(x, y, linewidth=2, color='red')
         
-        legend_elements = [patches.Patch(facecolor='blue', edgecolor='black', label='Reflect block'),
-                           patches.Patch(facecolor='darkgrey', edgecolor='black', label='Opaque block'),
-                           patches.Patch(facecolor='whitesmoke', edgecolor='black', label='Refract block'),
-                           patches.Patch(facecolor='red', edgecolor='black', label='No block allowed'),
-                           patches.Patch(facecolor='dimgrey', edgecolor='black', label='No block')]
+        # TO DO: need to add laser directions
+        
+        ax.set_xlim(-1, cols * 2 + 1)
+        ax.set_ylim(-1, rows * 2 + 1)
+        plt.axis('off')
+        
+        legend_elements = [patches.Patch(facecolor='whitesmoke', edgecolor='black', label='Reflect block'),
+                           patches.Patch(facecolor='dimgrey', edgecolor='black', label='Opaque block'),
+                           patches.Patch(facecolor='lightgrey', edgecolor='black', label='Refract block'),
+                           patches.Patch(facecolor='darkgrey', edgecolor='black', label='No block'),]
         #ax.legend(handles=legend_elements, loc='lower right')
         
         plt.title(f"{self.file[:-4]}")
@@ -415,5 +425,9 @@ class Puzzle:
 
 
 if __name__ == "__main__":
-    p = Puzzle('showstopper_4.bff')
+    p = Puzzle('mad_1.bff')
+    p.block_grid = [[None, None, None, Reflect((3, 0), True)],
+                    [None, None, None, None],
+                    [None, None, None, Opaque((3, 2), True)],
+                    [None, None, Reflect((2, 3), True), None]]
     p.draw_puzzle()
