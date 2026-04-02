@@ -186,20 +186,20 @@ class Puzzle:
                     block = block_grid[i][j]
 
                     if block == 'x':
-                        b = Transparent([2*i, 2*j], True)
+                        b = Transparent([i, j], True)
                         block_grid[i][j] = b
                     elif block == 'o':
                         block_grid[i][j] = None
                     elif block == 'A':
-                        b = Reflect([2*i, 2*j], True)
+                        b = Reflect([i, j], True)
                         block_grid[i][j] = b
                         blocks.append(b)
                     elif block == 'B':
-                        b = Opaque([2*i, 2*j], True)
+                        b = Opaque([i, j], True)
                         block_grid[i][j] = b
                         blocks.append(b)
                     elif block == 'C':
-                        b = Refract([2*i, 2*j], True)
+                        b = Refract([i, j], True)
                         block_grid[i][j] = b
                         blocks.append(b)
 
@@ -227,7 +227,7 @@ class Puzzle:
                     laser_pos.append(
                         [(int(split_line[1]), int(split_line[2]))])
                     laser_dir.append(
-                        [(int(split_line[3]), int(split_line[4]))])
+                        (int(split_line[3]), int(split_line[4])))
 
                 # add the specified points lasers need to intersect
                 elif split_line[0] == 'P':
@@ -370,35 +370,50 @@ class Puzzle:
 
                 if b is not None:   # if there is a block present
                     if b.type == "A":
-                        color = 'whitesmoke'
+                        color = 'blue'
                     elif b.type == "B":
                         color = 'darkgrey'
                     elif b.type == "C":
                         color = 'whitesmoke'
-                    elif:
-                        
-                    else:
-                        color = 'dimgrey'
+                    elif b.type == "x":
+                        color = 'red'
+                else:
+                    color = 'dimgrey'
 
-                    rect = patches.Rectangle((j, rows - i - 1), 1, 1,
+                rect = patches.Rectangle((j, rows - i - 1), 1, 1,
                                              linewidth=1, edgecolor="black", facecolor=color)
-                    ax.add_patch(rect)
+                ax.add_patch(rect)
         
-        for path in self.laser_pos:
-            x = [p[0] for p in path]
-            y = [p[1] for p in path]
+        # plot goal coordinates
+        x_goal = [coords[0] for coords in self.goal_coords]
+        y_goal = [coords[1] for coords in self.goal_coords]
+
+        ax.scatter(x_goal, y_goal, color = "gold")
+        
+        # plot lasers
+        for i, pos in enumerate(self.laser_pos):
+            x = [p[0] for p in pos]
+            y = [p[1] for p in pos]
             
             ax.plot(x, y, linewidth=2, color='red')
             
         ax.set_xlim(0, cols)
         ax.set_ylim(0, rows)
-        plt.axis('off')
+        #plt.axis('off')
+        
+        legend_elements = [patches.Patch(facecolor='blue', edgecolor='black', label='Reflect block'),
+                           patches.Patch(facecolor='darkgrey', edgecolor='black', label='Opaque block'),
+                           patches.Patch(facecolor='whitesmoke', edgecolor='black', label='Refract block'),
+                           patches.Patch(facecolor='red', edgecolor='black', label='No block allowed'),
+                           patches.Patch(facecolor='dimgrey', edgecolor='black', label='No block')]
+        #ax.legend(handles=legend_elements, loc='lower right')
+        
         plt.title(f"{self.file[:-4]}")
+        
         plt.show()
 
 
 
 if __name__ == "__main__":
-    p = Puzzle('mad_7.bff')
-    print(p)
-    print(p.draw_puzzle())
+    p = Puzzle('showstopper_4.bff')
+    p.draw_puzzle()
