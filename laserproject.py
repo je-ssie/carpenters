@@ -10,6 +10,7 @@ Created on Tue Mar 24 15:42:30 2026.
 from itertools import permutations
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from collections import Counter
 
 
 class Block:
@@ -104,7 +105,7 @@ class Refract(Block):
 
 class Opaque(Block):
 
-    def __init__(self, position, fixed = False):
+    def __init__(self, position, fixed=False):
         super().__init__(position, fixed)
         self.type = "B"
 
@@ -118,7 +119,7 @@ class Opaque(Block):
 
 class Transparent(Block):
 
-    def __init__(self, position, fixed = True):
+    def __init__(self, position, fixed=True):
         super().__init__(position, fixed)
         self.type = "x"
 
@@ -132,7 +133,7 @@ class Transparent(Block):
 
 
 class Puzzle:
-    def __init__(self, file = None):
+    def __init__(self, file=None):
         self.file = file
 
         # may need to change certain attributes as we go along
@@ -185,7 +186,7 @@ class Puzzle:
             block_grid = [line.split()
                           for line in lines[grid_start+1:grid_stop]]
 
-            # loop through the block_grid and replace the string rep with objects
+            # loop through block_grid and replace the string rep with objects
             # add all the blocks (reflect, refract, opaque) to the blocks list
             for i in range(len(block_grid)):   # row
                 for j in range(len(block_grid[0])):   # column
@@ -220,13 +221,13 @@ class Puzzle:
                 # add the specified amount of the block to the blocks list
                 elif split_line[0] == 'A':
                     num_A = int(split_line[1])
-                    blocks.append([Reflect(None, False) for i in range(num_A)])
+                    blocks += [Reflect(None, False) for i in range(num_A)]
                 elif split_line[0] == 'B':
                     num_B = int(split_line[1])
-                    blocks.append([Opaque(None, False) for i in range(num_B)])
+                    blocks += [Opaque(None, False) for i in range(num_B)]
                 elif split_line[0] == 'C':
                     num_C = int(split_line[1])
-                    blocks.append([Refract(None, False) for i in range(num_C)])
+                    blocks += [Refract(None, False) for i in range(num_C)]
 
                 # add the specified lasers to their respective laser lists
                 # order of the list is ["L", x, y, vx, vy]
@@ -260,16 +261,16 @@ class Puzzle:
         # get all possible permutation of movable blocks
         movable = 0
         for block in self.blocks:
-            if block.fixed == False:
+            if block.fixed is False:
                 movable += 1
         return list(permutations(avail_pos, movable))
 
     def check_collision(self, pos):
         # check if current position collides with a block in game
         # TODO: what if it collides with 2 adjacent blocks ?
-        
+
         x, y = pos
-        
+
         for block in self.blocks:
             if block.type == "x":
                 continue
@@ -280,15 +281,15 @@ class Puzzle:
 
     def check_boundary(self, position):
         # True if it is on edge, False if not
-        
+
         x, y = position
-        
+
         if x == 0 or y == 0:
             return True
-        
+
         max_x = len(self.block_grid[0]) * 2
         max_y = len(self.block_grid) * 2
-        
+
         if x == max_x or y == max_y:
             return True
 
@@ -314,11 +315,10 @@ class Puzzle:
         configs = self.get_configurations()
 
         # list of movable blocks
-        movable = [block for block in self.blocks if block.fixed == False]
+        movable = [block for block in self.blocks if block.fixed is False]
 
         for config in configs:
 
-            
             # update block positions
             for i in range(len(config)):
                 self.movable[i].set_position(config[i])
@@ -332,25 +332,25 @@ class Puzzle:
                 self.laser_pos = laser_pos
                 self.laser_dir = laser_dir
                 return True
-        
+
         print("No solution found.")
         return False
-    
+
     def laser_trace(self):
         # make copy of position and direction
         laser_pos = [pos[:] for pos in self.laser_pos]
         laser_dir = self.laser_dir[:]
-        
+
         complete = False
-        
-        count = 0 # delete later for debugging
-        
+
+        count = 0  # delete later for debugging
+
         while not complete:
-            if count > 10: 
-                return 
+            if count > 10:
+                return
             for i in range(len(laser_pos)):
 
-                # for a laser that reached edge of grid, the direction will be None
+                # for a laser that reached edge of grid, direction will be None
                 if laser_dir[i] is not None:
                     cur_pos = laser_pos[i][-1]
                     vx, vy = laser_dir[i]
@@ -374,36 +374,39 @@ class Puzzle:
                         elif block.type == "C":
                             laser_pos.append(laser_pos[i][:])
                             laser_dir.append(new_dir[1])
-                            
-            if count < 10: 
+
+            if count < 10:
                 print(laser_pos)
 
             # check if all lasers reached the end
             complete = all(d is None for d in laser_dir)
             count += 1
-            
+
         return laser_pos, laser_dir
-        
+
 
     def __str__(self):
         # might delete, feels useless
         grid_str = ""   # initialize str for grid
-        
+
         for row in self.block_grid:   # loop through all blocks in the grid
             row_str = ""   # intialize str for row
-            
+
             for col in row:   # add o for empty space or type of block
                 if col is None:
                     row_str += "o "
                 else:
                     row_str += f"{col.type} "
-                    
+
             grid_str += row_str.strip() + "\n"   # add row to grid
-            
+
         return grid_str
 
     def draw_puzzle(self, solved=False):
-        fig, ax = plt.subplots()
+        fig, (ax, ax_table) = plt.subplots(1, 2,
+                                           gridspec_kw={'width_ratios': [4, 1],
+                                                        'wspace': 0.2}
+                                           )
 
         rows = len(self.block_grid)
         cols = len(self.block_grid[0])
@@ -454,41 +457,58 @@ class Puzzle:
         # plot goal coordinates
         x_goal = [coords[0] for coords in self.goal_coords]
         y_goal = [rows * 2 - coords[1] for coords in self.goal_coords]
-
         ax.scatter(x_goal, y_goal, color="black", s=100, zorder=3)
 
-        # plot laser starting points
-        # for i, pos in enumerate(self.laser_pos):
-        #     x = [p[0] for p in pos]
-        #     y = [rows * 2 - p[1] for p in pos]
-
-        #     ax.scatter(x, y, linewidth=2, color='red', zorder=4)
-
-        # TODO: need to add laser directions (how to account for diverging paths???)
+        # TODO: need to add laser directions (account for diverging paths???)
         for i, path in enumerate(self.laser_pos):
-            x = [p[0] for p in path]
-            y = [rows * 2 - p[1] for p in path]
-            ax.scatter(x, y, linewidth=2, color='white', zorder=4,
-                       edgecolor="red", s=20)
 
+            # plot the lasers position and paths
             for j, pos in enumerate(path):
-                # 
+
+                # converting to plotting coordinates
+                x = pos[0]
+                y = rows * 2 - pos[1]
+
+                # plot laser positions
+                if pos in self.goal_coords:
+                    ax.scatter(x, y, c='white', zorder=4, edgecolor="red",
+                               s=100)
+                else:
+                    ax.scatter(x, y, c='white', zorder=4, edgecolor="red",
+                               s=10)
+
+                # draw line to the next point
                 if j != len(path) - 1:
                     next_pos = path[j+1]
-                    ax.plot([pos[0], next_pos[0]],
-                            [rows * 2 - pos[1], rows * 2 - next_pos[1]],
-                            color="red", linewidth=2)
-                # TODO: fix the logic for the last point in a path to extend 
+                    x_next = next_pos[0]
+                    y_next = rows * 2 - next_pos[1]
+
+                    ax.plot([x, x_next], [y, y_next], color="red", linewidth=2)
+                # laser will extend past the last point in the path
                 else:
-                    ax.plot([pos[0], pos[0] - 1],
-                            [rows * 2 - pos[1], rows * 2 - pos[1] + 1],
+                    ax.plot([x, x - rows * self.laser_dir[i][0]],
+                            [y, y - rows * self.laser_dir[i][1]],
                             color="red", linewidth=2)
 
         # edit axes
-        ax.set_xlim(-1, cols * 2 + 6)
+        ax.set_xlim(-1, cols * 2 + 1)
         ax.set_ylim(-1, rows * 2 + 1)
         ax.set_aspect('equal')
-        plt.axis('off')
+        ax.axis('off')
+        ax_table.axis('off')
+
+        # add what blocks are available to use to a table
+        b_str = self.__str__()
+
+        all_b = [blocks.type for blocks in self.blocks]
+        cell_text = [('Reflect', all_b.count("A"), b_str.count("A")),
+                     ('Opaque', all_b.count("B"), b_str.count("B")),
+                     ('Refract', all_b.count("C"), b_str.count("C"))]
+        table = ax_table.table(cellText=cell_text,
+                               colLabels=["Block", "Total", "Used"],
+                               bbox=[-0.5, 0.55, 1.8, 0.3], cellLoc='center')
+        table.scale(2, 1)
+        table.set_fontsize(10)
 
         # add the legend
         legend_elements = [patches.Patch(facecolor='whitesmoke',
@@ -506,9 +526,8 @@ class Puzzle:
                            patches.Patch(facecolor='gray',
                                          edgecolor='black',
                                          label='No block allowed')]
-        ax.legend(handles=legend_elements, loc='center right')
-
-        # TODO: add what blocks are available to use to a table
+        ax_table.legend(handles=legend_elements, loc='upper center',
+                        frameon=False, bbox_to_anchor=(0.5, 0.45), fontsize=10)
 
         # naming the plot and saving based on if puzzle is solved
         if solved:
@@ -521,16 +540,17 @@ class Puzzle:
         plt.show()
 
 
-
 if __name__ == "__main__":
     filenames = ['dark_1.bff', 'mad_1.bff', 'mad_4.bff', 'mad_7.bff',
                  'numbered_6.bff', 'showstopper_4.bff', 'tiny_5.bff',
                  'yarn_5.bff']
-    p = Puzzle(filenames[1])
-    p.block_grid = [[None, None, Refract((2, 0), True), None],
-                    [None, None, None, Reflect((3, 1), True)],
-                    [Reflect((0, 2), True), None, None, None],
-                    [None, None, None, None]]
-    p.laser_pos = [[(2, 7), (6, 3), (5, 2), (4, 1), (3, 0)], [(5, 2), (4, 3), (2, 5), (4, 7)]]
+    p = Puzzle(filenames[2])
+    # p.block_grid = [[None, None, Refract((2, 0), True), None],
+    #                 [None, None, None, Reflect((3, 1), True)],
+    #                 [Reflect((0, 2), True), None, None, None],
+    #                 [None, None, None, None]]
+    # p.laser_pos = [[(2, 7), (6, 3), (5, 2), (4, 1), (3, 0)],
+    #                [(5, 2), (4, 3), (2, 5), (4, 7)]]
+    # p.laser_dir = [(1, -1), (-1, 1), (1, 1)]
     p.draw_puzzle()
     # print(p)
