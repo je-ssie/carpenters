@@ -420,19 +420,39 @@ class Puzzle:
         ax.scatter(x_goal, y_goal, color="black", s=100, zorder=3)
 
         # plot laser starting points
-        for i, pos in enumerate(self.laser_pos):
-            x = [p[0] for p in pos]
-            y = [rows * 2 - p[1] for p in pos]
+        # for i, pos in enumerate(self.laser_pos):
+        #     x = [p[0] for p in pos]
+        #     y = [rows * 2 - p[1] for p in pos]
 
-            ax.scatter(x, y, linewidth=2, color='red', zorder=4)
+        #     ax.scatter(x, y, linewidth=2, color='red', zorder=4)
 
-        # TODO: need to add laser directions
+        # TODO: need to add laser directions (how to account for diverging paths???)
+        for i, path in enumerate(self.laser_pos):
+            x = [p[0] for p in path]
+            y = [rows * 2 - p[1] for p in path]
+            ax.scatter(x, y, linewidth=2, color='white', zorder=4,
+                       edgecolor="red", s=20)
 
-        ax.set_xlim(-1, cols * 2 + 8)
+            for j, pos in enumerate(path):
+                # 
+                if j != len(path) - 1:
+                    next_pos = path[j+1]
+                    ax.plot([pos[0], next_pos[0]],
+                            [rows * 2 - pos[1], rows * 2 - next_pos[1]],
+                            color="red", linewidth=2)
+                # TODO: fix the logic for the last point in a path to extend 
+                else:
+                    ax.plot([pos[0], pos[0] - 1],
+                            [rows * 2 - pos[1], rows * 2 - pos[1] + 1],
+                            color="red", linewidth=2)
+
+        # edit axes
+        ax.set_xlim(-1, cols * 2 + 6)
         ax.set_ylim(-1, rows * 2 + 1)
         ax.set_aspect('equal')
         plt.axis('off')
 
+        # add the legend
         legend_elements = [patches.Patch(facecolor='whitesmoke',
                                          edgecolor='black',
                                          label='Reflect block'),
@@ -450,10 +470,15 @@ class Puzzle:
                                          label='No block allowed')]
         ax.legend(handles=legend_elements, loc='center right')
 
-        plt.title(f"{self.file[:-4]}")
+        # TODO: add what blocks are available to use to a table
 
+        # naming the plot and saving based on if puzzle is solved
         if solved:
             plt.savefig(f"{self.file} solved.png")
+            plt.title(f"{self.file[:-4]} solved")
+
+        # plt.savefig(f"{self.file}.png")
+        plt.title(f"{self.file[:-4]}")
 
         plt.show()
 
@@ -463,10 +488,11 @@ if __name__ == "__main__":
     filenames = ['dark_1.bff', 'mad_1.bff', 'mad_4.bff', 'mad_7.bff',
                  'numbered_6.bff', 'showstopper_4.bff', 'tiny_5.bff',
                  'yarn_5.bff']
-    p = Puzzle(filenames[7])
-    # p.block_grid = [[None, None, None, Reflect((3, 0), True)],
-    #                 [None, None, None, None],
-    #                 [None, None, None, Opaque((3, 2), True)],
-    #                 [None, None, Reflect((2, 3), True), None]]
+    p = Puzzle(filenames[1])
+    p.block_grid = [[None, None, Refract((2, 0), True), None],
+                    [None, None, None, Reflect((3, 1), True)],
+                    [Reflect((0, 2), True), None, None, None],
+                    [None, None, None, None]]
+    p.laser_pos = [[(2, 7), (6, 3), (5, 2), (4, 1), (3, 0)], [(5, 2), (4, 3), (2, 5), (4, 7)]]
     p.draw_puzzle()
     # print(p)
