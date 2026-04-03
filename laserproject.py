@@ -13,18 +13,22 @@ import matplotlib.patches as patches
 
 
 class Block:
-    def __init__(self, position, fixed):
+    def __init__(self, position, fixed = False):
         self.position = position
         self.fixed = fixed
 
     def get_all_faces(self):
-        bx, by = self.position
-        return [(bx, by + 1), (bx + 2, by + 1), (bx + 1, by), (bx + 1, by + 2)]
+        by, bx = self.position
+        x = bx * 2
+        y = by * 2
+        return [(x, y + 1), (x + 2, y + 1), (x + 1, y), (x + 1, y + 2)]
 
     def get_face(self, x, y):
 
         # block coordinates
-        bx, by = self.position
+        by, bx = self.position
+        bx *= 2
+        by *= 2
 
         # translate to grid coordinates to check face
         if (bx, by + 1) == (x, y):
@@ -52,12 +56,14 @@ class Block:
 
 """
 (0,0) block -> left(0, 1) right(2, 1) top(1, 0) bottom(1, 2)
+[0][1], (1, 0) block -> left(2, 1) right(4, 1) top(3, 0) bottom(3, 2)
+[1][2], (2, 1) block -> left(4, 3) right(6, 3) top(5, 2) bottom(5, 4)
 """
 
 
 class Reflect(Block):
 
-    def __init__(self, position, fixed):
+    def __init__(self, position, fixed = False):
         super().__init__(position, fixed)
         self.type = "A"
 
@@ -77,7 +83,7 @@ class Reflect(Block):
 
 class Refract(Block):
 
-    def __init__(self, position, fixed):
+    def __init__(self, position, fixed = False):
         super().__init__(position, fixed)
         self.type = "C"
 
@@ -98,7 +104,7 @@ class Refract(Block):
 
 class Opaque(Block):
 
-    def __init__(self, position, fixed):
+    def __init__(self, position, fixed = False):
         super().__init__(position, fixed)
         self.type = "B"
 
@@ -112,7 +118,7 @@ class Opaque(Block):
 
 class Transparent(Block):
 
-    def __init__(self, position, fixed):
+    def __init__(self, position, fixed = True):
         super().__init__(position, fixed)
         self.type = "x"
 
@@ -126,7 +132,7 @@ class Transparent(Block):
 
 
 class Puzzle:
-    def __init__(self, file):
+    def __init__(self, file = None):
         self.file = file
 
         # may need to change certain attributes as we go along
@@ -152,7 +158,8 @@ class Puzzle:
         self.goal_coords = []
 
         # read in the file
-        self.read_bff(file)
+        if file is not None:
+            self.read_bff(file)
 
     def read_bff(self, file):
         # read in .bff and assign attributes
@@ -257,20 +264,35 @@ class Puzzle:
                 movable += 1
         return list(permutations(avail_pos, movable))
 
-    def check_collision(self, x, y):
+    def check_collision(self, pos):
         # check if current position collides with a block in game
         # TODO: what if it collides with 2 adjacent blocks ?
+        
+        x, y = pos
+        
         for block in self.blocks:
+            if block.type == "x":
+                continue
             face = block.get_face(x, y)
             if face is not None:
                 return block, face
         return None, None
 
     def check_boundary(self, position):
-        # TODO: check if position is on the boundary of the grid
         # True if it is on edge, False if not
+        
+        x, y = position
+        
+        if x == 0 or y == 0:
+            return True
+        
+        max_x = len(self.block_grid[0]) * 2
+        max_y = len(self.block_grid) * 2
+        
+        if x == max_x or y == max_y:
+            return True
 
-        return
+        return False
 
     def check_solved(self, laser_pos):
         all_laser_pos = set()
@@ -296,72 +318,88 @@ class Puzzle:
 
         for config in configs:
 
-            # make copy of position and direction
-            laser_pos = [pos[:] for pos in self.laser_pos]
-            laser_dir = self.laser_dir[:]
-
-            complete = False
+            
             # update block positions
             for i in range(len(config)):
                 self.movable[i].set_position(config[i])
 
             # do laser tracing
-            while not complete:
-                for i in range(len(laser_pos)):
-
-                    # for a laser that reached edge of grid, the direction will be None
-                    if laser_dir[i] is not None:
-                        cur_pos = laser_pos[i][-1]
-                        vx, vy = laser_dir[i]
-                        next_pos = (cur_pos[0] + vx, cur_pos[1] + vy)
-                        laser_pos[i].append(next_pos)
-
-                        if self.check_boundary(next_pos):
-                            laser_dir[i] = None
-
-                        block, face = self.check_collision(next_pos)
-
-                        # if collision occurred
-                        if block is not None:
-                            new_dir = block.laser_directions(vx, vy, face)
-                            # update direction based on type of block
-                            if block.type == "A":
-                                laser_dir[i] = new_dir[0]
-                            elif block.type == "B":
-                                laser_dir[i] = None
-                            elif block.type == "C":
-                                laser_pos.append(laser_pos[i][:])
-                                laser_dir.append(new_dir[1])
-                            elif block.type == "x":
-                                laser_pos.append(laser_pos[i][:])
-                                laser_dir.append(new_dir[1])
-
-                # check if all lasers reached the end
-                complete = all(d is None for d in laser_dir)
+            laser_pos, laser_dir = self.laser_trace()
 
             # if this configuration solves the puzzle
-            if self.solve_puzzle():
-                # TODO: check what the format of the solution needs to be
+            if self.check_solved(laser_pos):
                 # update self.laser_pos, self.laser_dir
-                return
+                self.laser_pos = laser_pos
+                self.laser_dir = laser_dir
+                return True
+        
+        print("No solution found.")
+        return False
+    
+    def laser_trace(self):
+        # make copy of position and direction
+        laser_pos = [pos[:] for pos in self.laser_pos]
+        laser_dir = self.laser_dir[:]
+        
+        complete = False
+        
+        count = 0 # delete later for debugging
+        
+        while not complete:
+            if count > 10: 
+                return 
+            for i in range(len(laser_pos)):
 
-        pass
+                # for a laser that reached edge of grid, the direction will be None
+                if laser_dir[i] is not None:
+                    cur_pos = laser_pos[i][-1]
+                    vx, vy = laser_dir[i]
+                    next_pos = (cur_pos[0] + vx, cur_pos[1] + vy)
+                    laser_pos[i].append(next_pos)
+
+                    if self.check_boundary(next_pos):
+                        laser_dir[i] = None
+
+                    block, face = self.check_collision(next_pos)
+
+                    # if collision occurred
+                    if block is not None:
+                        print(block.type, next_pos, face)
+                        new_dir = block.laser_directions(vx, vy, face)
+                        # update direction based on type of block
+                        if block.type == "A":
+                            laser_dir[i] = new_dir[0]
+                        elif block.type == "B":
+                            laser_dir[i] = None
+                        elif block.type == "C":
+                            laser_pos.append(laser_pos[i][:])
+                            laser_dir.append(new_dir[1])
+                            
+            if count < 10: 
+                print(laser_pos)
+
+            # check if all lasers reached the end
+            complete = all(d is None for d in laser_dir)
+            count += 1
+            
+        return laser_pos, laser_dir
+        
 
     def __str__(self):
         # might delete, feels useless
         grid_str = ""   # initialize str for grid
-
+        
         for row in self.block_grid:   # loop through all blocks in the grid
             row_str = ""   # intialize str for row
-
+            
             for col in row:   # add o for empty space or type of block
                 if col is None:
                     row_str += "o "
                 else:
                     row_str += f"{col.type} "
-
+                    
             grid_str += row_str.strip() + "\n"   # add row to grid
-
+            
         return grid_str
 
     def draw_puzzle(self, solved=False):
