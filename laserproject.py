@@ -8,6 +8,7 @@ Created on Tue Mar 24 15:42:30 2026.
 
 
 from itertools import permutations
+from itertools import combinations
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from collections import Counter
@@ -252,31 +253,43 @@ class Puzzle:
     def get_configurations(self):
         # available cells in the block grid to place a block
         avail_pos = []
-
-        for i in range(len(self.block_grid[0])):
-            for j in range(len(self.block_grid)):
-                if self.block_grid[j][i] is None:
-                    avail_pos.append((i, j))
-
+    
+        
         # get all possible permutation of movable blocks
         movable = 0
         for block in self.blocks:
             if block.fixed is False:
                 movable += 1
+
+        for i in range(len(self.block_grid)):
+            for j in range(len(self.block_grid[0])):
+                if self.block_grid[i][j] is None:
+                    avail_pos.append((i, j))
+
         return list(permutations(avail_pos, movable))
 
-    def check_collision(self, pos):
+    def check_collision(self, pos, prev_pos):
         # check if current position collides with a block in game
         # TODO: what if it collides with 2 adjacent blocks ?
 
         x, y = pos
+        px, py = prev_pos
 
         for block in self.blocks:
             if block.type == "x":
                 continue
+            
             face = block.get_face(x, y)
-            if face is not None:
+            prev_face = block.get_face(px, py)
+            
+            if block.type == 'B' and face is not None and prev_face is not None:
+                return None, face
+            
+            # only a valid collision if the previous position does not collide
+            # with the same block (hitting wall from inside the block)
+            if face is not None and prev_face is None:
                 return block, face
+            
         return None, None
 
     def check_boundary(self, position):
@@ -308,6 +321,11 @@ class Puzzle:
             if coord not in all_laser_pos:
                 return False
         return True
+    
+    def place_blocks(self):
+        for block in self.blocks:
+            x, y = block.position
+            self.block_grid[x][y] = block
 
     def solve_puzzle(self):
         # all permutations of block placements
@@ -316,12 +334,25 @@ class Puzzle:
 
         # list of movable blocks
         movable = [block for block in self.blocks if block.fixed is False]
+        
+        history = set()
 
         for config in configs:
 
             # update block positions
+            # for block in movable:
+            #     pos = config[block.type].pop()
+            #     block.set_position(pos)
+            
+            block_pos = set()
             for i in range(len(config)):
-                self.movable[i].set_position(config[i])
+                block_pos.add((movable[i].type, config[i]))
+                movable[i].set_position(config[i])
+            
+            if block_pos in history:
+                continue
+            else:
+                history.add(frozenset(block_pos))
 
             # do laser tracing
             laser_pos, laser_dir = self.laser_trace()
@@ -331,6 +362,7 @@ class Puzzle:
                 # update self.laser_pos, self.laser_dir
                 self.laser_pos = laser_pos
                 self.laser_dir = laser_dir
+                self.place_blocks()
                 return True
 
         print("No solution found.")
@@ -343,11 +375,8 @@ class Puzzle:
 
         complete = False
 
-        count = 0  # delete later for debugging
-
         while not complete:
-            if count > 10:
-                return
+
             for i in range(len(laser_pos)):
 
                 # for a laser that reached edge of grid, direction will be None
@@ -355,32 +384,33 @@ class Puzzle:
                     cur_pos = laser_pos[i][-1]
                     vx, vy = laser_dir[i]
                     next_pos = (cur_pos[0] + vx, cur_pos[1] + vy)
-                    laser_pos[i].append(next_pos)
+                    
 
                     if self.check_boundary(next_pos):
                         laser_dir[i] = None
 
-                    block, face = self.check_collision(next_pos)
+                    block, face = self.check_collision(next_pos, cur_pos)
 
                     # if collision occurred
-                    if block is not None:
-                        print(block.type, next_pos, face)
-                        new_dir = block.laser_directions(vx, vy, face)
-                        # update direction based on type of block
-                        if block.type == "A":
-                            laser_dir[i] = new_dir[0]
-                        elif block.type == "B":
+                    if face is not None:
+                        if block is None: 
                             laser_dir[i] = None
-                        elif block.type == "C":
-                            laser_pos.append(laser_pos[i][:])
-                            laser_dir.append(new_dir[1])
-
-            if count < 10:
-                print(laser_pos)
-
+                        else:
+                            new_dir = block.laser_directions(vx, vy, face)
+                            laser_pos[i].append(next_pos)
+                            # update direction based on type of block
+                            if block.type == "A":
+                                laser_dir[i] = new_dir[0]
+                            elif block.type == "B":
+                                laser_dir[i] = None
+                            elif block.type == "C":
+                                laser_pos.append(laser_pos[i][:])
+                                laser_dir.append(new_dir[1])
+                    else:
+                        laser_pos[i].append(next_pos)
+                            
             # check if all lasers reached the end
             complete = all(d is None for d in laser_dir)
-            count += 1
 
         return laser_pos, laser_dir
 
