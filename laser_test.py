@@ -28,6 +28,7 @@ class TestLaserTrace(unittest.TestCase):
         self.p.laser_pos = [[(2, 7)]]
         self.p.laser_dir = [(1, -1)]
         self.p.goal_coords = [(4, 7), (2, 5), (3, 0), (4, 3)]
+        self.p.build_block_lookup()
     
     def test_laser_trace_position(self):
         pos_solution = [[(2, 7), (3, 6), (4, 5), (5, 4), (6, 3), (5, 2), (4, 1), (3, 0)], 
@@ -85,17 +86,46 @@ class TestMad1(unittest.TestCase):
     def test_block_positions_after_solving(self):
         pass
     
-class TestMad4(unittest.TestCase):
-    pass
+class TestAllFiles(unittest.TestCase):
+    
+    def test_Mad1(self):
+        p = Puzzle('mad_1.bff')
+        self.assertTrue(p.solve_puzzle(), 'failed to solve puzzle.')
+        
+    def test_Mad4(self):
+        p = Puzzle('mad_4.bff')
+        self.assertTrue(p.solve_puzzle(), 'failed to solve puzzle.')
+        
+    def test_Mad7(self):
+        p = Puzzle('mad_7.bff')
+        self.assertTrue(p.solve_puzzle(), 'failed to solve puzzle.')
+    
+    def test_dark1(self):
+        p = Puzzle('dark_1.bff')
+        self.assertTrue(p.solve_puzzle(), 'failed to solve puzzle.')
+        
+    def test_numbered6(self):
+        p = Puzzle('numbered_6.bff')
+        self.assertTrue(p.solve_puzzle(), 'failed to solve puzzle.')
+        
+    def test_showstopper4(self):
+        p = Puzzle('showstopper_4.bff')
+        self.assertTrue(p.solve_puzzle(), 'failed to solve puzzle.')
+    
+    def test_yarn5(self):
+        p = Puzzle('yarn_5.bff')
+        self.assertTrue(p.solve_puzzle(), 'failed to solve puzzle.')
+        
+    
         
 if __name__ == "__main__":
-    # unittest.main()
+    unittest.main()
     # suite = unittest.TestLoader().loadTestsFromTestCase(TestMad1)
     # unittest.TextTestRunner().run(suite)
-    file = 'mad_4.bff'
-    p = Puzzle(file)
-    print(p.solve_puzzle())
-    print(p.block_grid)
+    # file = 'mad_4.bff'
+    # p = Puzzle(file)
+    # print(p.solve_puzzle())
+    # print(p.block_grid)
     
 # # test check_boundary()
 # assert p.check_boundary((3, 8)) == True, "Check_boundary() failed for (3, 8)"
