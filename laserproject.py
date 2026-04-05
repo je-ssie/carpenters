@@ -7,7 +7,6 @@ Created on Tue Mar 24 15:42:30 2026.
 """
 
 
-from itertools import permutations
 from itertools import combinations
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -23,28 +22,10 @@ class Block:
         by, bx = self.position
         x = bx * 2
         y = by * 2
-        return [(x, y + 1), (x + 2, y + 1), (x + 1, y), (x + 1, y + 2)]
-
-    def get_face(self, x, y):
-
-        # block coordinates
-        by, bx = self.position
-        bx *= 2
-        by *= 2
-
-        # translate to grid coordinates to check face
-        if (bx, by + 1) == (x, y):
-            face = "left"
-        elif (bx + 2, by + 1) == (x, y):
-            face = "right"
-        elif (bx + 1, by) == (x, y):
-            face = "top"
-        elif (bx + 1, by + 2) == (x, y):
-            face = "bottom"
-        else:
-            face = None
-
-        return face
+        return {(x, y + 1): "left", 
+                (x + 2, y + 1): "right", 
+                (x + 1, y): "top", 
+                (x + 1, y + 2): "bottom"}
 
     def set_position(self, new_pos):
 
@@ -54,13 +35,6 @@ class Block:
 
     def __repr__(self):
         return f"{self.type}"
-
-
-"""
-(0,0) block -> left(0, 1) right(2, 1) top(1, 0) bottom(1, 2)
-[0][1], (1, 0) block -> left(2, 1) right(4, 1) top(3, 0) bottom(3, 2)
-[1][2], (2, 1) block -> left(4, 3) right(6, 3) top(5, 2) bottom(5, 4)
-"""
 
 
 class Reflect(Block):
@@ -137,8 +111,6 @@ class Puzzle:
     def __init__(self, file=None):
         self.file = file
 
-        # may need to change certain attributes as we go along
-
         # 2D list representing block configuration
         # ex. [[Block obj, None, None],
         #      [None, None, Block obj]]
@@ -158,6 +130,8 @@ class Puzzle:
 
         # target positions for solution (list of tuples)
         self.goal_coords = []
+        
+        self.block_lookup = {}
 
         # read in the file
         if file is not None:
@@ -251,45 +225,120 @@ class Puzzle:
             self.goal_coords = goal_coords[:]
 
     def get_configurations(self):
-        # available cells in the block grid to place a block
         avail_pos = []
-    
         
-        # get all possible permutation of movable blocks
-        movable = 0
-        for block in self.blocks:
-            if block.fixed is False:
-                movable += 1
-
+        # check if a cell in block_grid is empty (None) and add to avail_pos
         for i in range(len(self.block_grid)):
             for j in range(len(self.block_grid[0])):
                 if self.block_grid[i][j] is None:
                     avail_pos.append((i, j))
+        
+        # group movable blocks by type
+        movable = [b for b in self.blocks if not b.fixed]
+        type_counts = {}
+        for block in movable:
+            type_counts[block.type] = type_counts.get(block.type, 0) + 1
+        
+        # generate all valid configurations using helper function
+        configs = []
+        self._generate_configs(avail_pos, list(type_counts.items()), [], configs)
+        
+        return configs
+    
+    def _generate_configs(self, avail_pos, type_list, current, results):
+        """
+        a recursive helper function to generate all valid block placements.
+        
+        it works by placing one block type at a time. for each type, it tries
+        all possible combinations of configurations, then recursively handles
+        the remaining block types using leftover available positions.
 
-        return list(permutations(avail_pos, movable))
+        Parameters
+        ----------
+        avail_pos : list
+            available positions that haven't been used yet.
+        type_list : list
+            remaining block types to place. Each item is a tuple (block_type, count) like ('A', 3).
+        current : list
+            positions chosen so far in this configuration.
+        results : list
+            accumulator list where complete configurations are stored.
 
-    def check_collision(self, pos, prev_pos):
-        # check if current position collides with a block in game
-        # TODO: what if it collides with 2 adjacent blocks ?
+        Returns
+        -------
+        None.
 
-        x, y = pos
-        px, py = prev_pos
+        """
+        # base case: no types left to assign positions to
+        # add configuration to results
+        if not type_list:
+            results.append(current[:])
+            return
+        
+        # recursive case: place next block type blocks
+        block_type, count = type_list[0]
+        remaining_types = type_list[1:]
+        
+        for positions in combinations(avail_pos, count):
+            
+            # updated available positions after current configuration
+            new_avail = [p for p in avail_pos if p not in positions]
+            
+            # recursive call to place the next block types
+            self._generate_configs(new_avail, remaining_types, current + list(positions), results)
+            
+    def build_block_lookup(self):
+        """
+        Builds a dictionary of positions mapped to corresponding block and face.
 
+        Returns
+        -------
+        None.
+
+        """
+        
+        self.block_lookup = {}
+        
+        # for every block, we find the positions of their faces
         for block in self.blocks:
-            if block.type == "x":
+            if block.position is None or block.type == "x":
                 continue
             
-            face = block.get_face(x, y)
-            prev_face = block.get_face(px, py)
+            # map laser coordinates to (block, face) pairs
+            faces = block.get_all_faces()
             
-            if block.type == 'B' and face is not None and prev_face is not None:
-                return None, face
+            # build dictionary of (x, y): [(block, face), (block2, face2), ...]
+            for coord, face in faces.items():
+                if coord not in self.block_lookup:
+                    self.block_lookup[coord] = []
+                self.block_lookup[coord].append((block, face))
+
+    def check_collision(self, pos, prev_pos):
+
+        # check current position
+        if pos not in self.block_lookup:
+            return None, None
+        
+        for block, face in self.block_lookup[pos]:
             
-            # only a valid collision if the previous position does not collide
-            # with the same block (hitting wall from inside the block)
-            if face is not None and prev_face is None:
+            # handle opaque block special case
+            if block.type == 'B':
+                if prev_pos in self.block_lookup:
+                    for prev_block, prev_face in self.block_lookup[prev_pos]:
+                        if prev_block == block:
+                            return None, face
+            
+            # only valid if previous position doesn't hit same block
+            prev_hits_same = False
+            if prev_pos in self.block_lookup:
+                for prev_block, _ in self.block_lookup[prev_pos]:
+                    if prev_block == block:
+                        prev_hits_same = True
+                        break
+            
+            if not prev_hits_same:
                 return block, face
-            
+        
         return None, None
 
     def check_boundary(self, position):
@@ -328,31 +377,20 @@ class Puzzle:
             self.block_grid[x][y] = block
 
     def solve_puzzle(self):
-        # all permutations of block placements
-        # TODO: deal with duplicate configs
+        # all configurations possible of block placements
         configs = self.get_configurations()
 
         # list of movable blocks
         movable = [block for block in self.blocks if block.fixed is False]
-        
-        history = set()
 
         for config in configs:
-
+        
             # update block positions
-            # for block in movable:
-            #     pos = config[block.type].pop()
-            #     block.set_position(pos)
+            for i, pos in enumerate(config):
+                movable[i].set_position(pos)
             
-            block_pos = set()
-            for i in range(len(config)):
-                block_pos.add((movable[i].type, config[i]))
-                movable[i].set_position(config[i])
-            
-            if block_pos in history:
-                continue
-            else:
-                history.add(frozenset(block_pos))
+            # update the block faces with this configuration for quick lookup
+            self.build_block_lookup()
 
             # do laser tracing
             laser_pos, laser_dir = self.laser_trace()
@@ -367,38 +405,48 @@ class Puzzle:
 
         print("No solution found.")
         return False
-
+    
     def laser_trace(self):
-        # make copy of position and direction
         laser_pos = [pos[:] for pos in self.laser_pos]
         laser_dir = self.laser_dir[:]
-
+        
+        # track (position, direction) states for each laser to detect loops
+        laser_states = [set() for _ in laser_pos]
+    
         complete = False
-
+    
         while not complete:
-
+    
             for i in range(len(laser_pos)):
-
-                # for a laser that reached edge of grid, direction will be None
                 if laser_dir[i] is not None:
                     cur_pos = laser_pos[i][-1]
                     vx, vy = laser_dir[i]
-                    next_pos = (cur_pos[0] + vx, cur_pos[1] + vy)
                     
-
+                    # check if this state was seen before (infinite loop)
+                    state = (cur_pos, (vx, vy))
+                    if state in laser_states[i]:
+                        # stop this laser if it is looping
+                        laser_dir[i] = None  
+                        continue
+                    
+                    laser_states[i].add(state)
+                    
+                    next_pos = (cur_pos[0] + vx, cur_pos[1] + vy)
+    
                     if self.check_boundary(next_pos):
+                        laser_pos[i].append(next_pos)
                         laser_dir[i] = None
-
+                        continue
+    
                     block, face = self.check_collision(next_pos, cur_pos)
-
-                    # if collision occurred
+    
                     if face is not None:
-                        if block is None: 
+                        if block is None:
                             laser_dir[i] = None
                         else:
                             new_dir = block.laser_directions(vx, vy, face)
                             laser_pos[i].append(next_pos)
-                            # update direction based on type of block
+                            
                             if block.type == "A":
                                 laser_dir[i] = new_dir[0]
                             elif block.type == "B":
@@ -406,14 +454,14 @@ class Puzzle:
                             elif block.type == "C":
                                 laser_pos.append(laser_pos[i][:])
                                 laser_dir.append(new_dir[1])
+                                # new laser needs tracker
+                                laser_states.append(set())  
                     else:
                         laser_pos[i].append(next_pos)
-                            
-            # check if all lasers reached the end
+    
             complete = all(d is None for d in laser_dir)
-
+    
         return laser_pos, laser_dir
-
 
     def __str__(self):
         # might delete, feels useless
