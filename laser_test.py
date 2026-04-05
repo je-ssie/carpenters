@@ -6,7 +6,7 @@ Created on Thu Apr  2 16:25:10 2026
 @author: jessie
 """
 import unittest
-from laser_personal import *
+from laserproject import *
 
 # # test get all face
 # b = Block([1, 2], False)
