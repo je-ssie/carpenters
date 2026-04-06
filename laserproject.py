@@ -321,13 +321,6 @@ class Puzzle:
         
         for block, face in self.block_lookup[pos]:
             
-            # handle opaque block special case
-            if block.type == 'B':
-                if prev_pos in self.block_lookup:
-                    for prev_block, prev_face in self.block_lookup[prev_pos]:
-                        if prev_block == block:
-                            return None, face
-            
             # only valid if previous position doesn't hit same block
             prev_hits_same = False
             if prev_pos in self.block_lookup:
@@ -407,20 +400,28 @@ class Puzzle:
         return False
     
     def laser_trace(self):
-        laser_pos = [pos[:] for pos in self.laser_pos]
         laser_dir = self.laser_dir[:]
+        laser_pos = []
         
+        for i, pos in enumerate(self.laser_pos):
+            vx, vy = laser_dir[i]
+            # one step before the initial starting point
+            laser_pos.append([(pos[0][0] - vx, pos[0][1] - vy)])
+
         # track (position, direction) states for each laser to detect loops
         laser_states = [set() for _ in laser_pos]
     
         complete = False
-    
+        
         while not complete:
     
             for i in range(len(laser_pos)):
+                
                 if laser_dir[i] is not None:
-                    cur_pos = laser_pos[i][-1]
+                    
                     vx, vy = laser_dir[i]
+                    
+                    cur_pos = laser_pos[i][-1]
                     
                     # check if this state was seen before (infinite loop)
                     state = (cur_pos, (vx, vy))
@@ -433,12 +434,13 @@ class Puzzle:
                     
                     next_pos = (cur_pos[0] + vx, cur_pos[1] + vy)
     
-                    if self.check_boundary(next_pos):
+                    if self.check_boundary(next_pos) and len(laser_pos[i]) > 1:
                         laser_pos[i].append(next_pos)
                         laser_dir[i] = None
                         continue
     
                     block, face = self.check_collision(next_pos, cur_pos)
+
     
                     if face is not None:
                         if block is None:
@@ -460,8 +462,9 @@ class Puzzle:
                         laser_pos[i].append(next_pos)
     
             complete = all(d is None for d in laser_dir)
-    
-        return laser_pos, laser_dir
+            
+        
+        return [pos[1:] for pos in laser_pos], laser_dir
 
     def __str__(self):
         # might delete, feels useless
