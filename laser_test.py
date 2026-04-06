@@ -13,6 +13,24 @@ from laserproject import *
 # b = Block([1, 2], False)
 # print(b.get_all_faces())
 
+class TestPuzzle(unittest.TestCase):
+    def test_generate_configs(self):
+        pass
+    def test_get_configurations(self):
+        pass
+    def test_build_block_lookup(self):
+        pass
+    def test_no_collision(self):
+        pass
+    def test_yes_collision(self):
+        pass
+    def test_check_boundary(self):
+        pass
+    def test_check_solved(self):
+        pass
+    def test_place_blocks(self):
+        pass
+
 class TestLaserTrace(unittest.TestCase):
     
     def setUp(self):
