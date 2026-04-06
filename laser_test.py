@@ -116,6 +116,11 @@ class TestAllFiles(unittest.TestCase):
     def test_yarn5(self):
         p = Puzzle('yarn_5.bff')
         self.assertTrue(p.solve_puzzle(), 'failed to solve puzzle.')
+        
+    def test_tiny5(self):
+        p = Puzzle('tiny_5.bff')
+        self.assertTrue(p.solve_puzzle(), 'failed to solve puzzle.')
+        
 
 class TestBlockFaces(unittest.TestCase):
     def test_get_all_faces_coordinates(self):
@@ -148,7 +153,7 @@ class TestBlockDirections(unittest.TestCase):
     def test_refract_top(self):
         b = Refract([0, 0])
         directions = b.laser_directions(1, 1, "top")
-        expected = [(1, 1), (-1, 1)]
+        expected = [(1, 1), (1, -1)]
         self.assertEqual(directions, expected)
         
     def test_refract_left(self):
