@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Apr  2 16:25:10 2026
+Created on Mon Apr  6 11:10:49 2026
 
-@author: jessie
+@author: sabrinachen
 """
+
 import unittest
 from laserproject import *
 
@@ -115,6 +116,46 @@ class TestAllFiles(unittest.TestCase):
     def test_yarn5(self):
         p = Puzzle('yarn_5.bff')
         self.assertTrue(p.solve_puzzle(), 'failed to solve puzzle.')
+
+class TestBlockFaces(unittest.TestCase):
+    def test_get_all_faces_coordinates(self):
+        b = Block([1, 2])
+        faces = b.get_all_faces()
+        
+        expected = {(4, 3): "left", (6, 3): "right",
+                    (5, 2): "top", (5, 4): "bottom"}
+        
+        self.assertEqual(faces, expected)
+
+class TestBlockDirections(unittest.TestCase):
+    def test_opaque(self):
+        b = Opaque([0, 0])
+        self.assertIsNone(b.laser_directions(1, 1, "top"))
+    
+    def test_transparent(self):
+        b = Transparent([0, 0])
+        self.assertEqual(b.laser_directions(1, 1, "top"), [(1, 1)])
+        
+    def test_reflect(self):
+        b = Reflect([0, 0])
+        directions = b.laser_directions(1, 1, "top")
+        directions.extend(b.laser_directions(1, 1, "bottom"))
+        directions.extend(b.laser_directions(1, 1, "left"))
+        directions.extend(b.laser_directions(1, 1, "right"))
+        expected = [(1, -1), (1, -1), (-1, 1), (-1, 1)]
+        self.assertEqual(directions, expected)
+    
+    def test_refract_top(self):
+        b = Refract([0, 0])
+        directions = b.laser_directions(1, 1, "top")
+        expected = [(1, 1), (-1, 1)]
+        self.assertEqual(directions, expected)
+        
+    def test_refract_left(self):
+        b = Refract([0, 0])
+        directions = b.laser_directions(1, -1, "left")
+        expected = [(1, -1), (-1, -1)]
+        self.assertEqual(directions, expected)
         
     
         
