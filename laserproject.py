@@ -540,7 +540,6 @@ class Puzzle:
         y_goal = [rows * 2 - coords[1] for coords in self.goal_coords]
         ax.scatter(x_goal, y_goal, color="black", s=100, zorder=3)
 
-        # TODO: need to add laser directions (account for diverging paths???)
         for i, path in enumerate(self.laser_pos):
 
             # plot the lasers position and paths
@@ -551,10 +550,13 @@ class Puzzle:
                 y = rows * 2 - pos[1]
 
                 # plot laser positions
-                if pos in self.goal_coords:
+                if pos in self.goal_coords:   # laser goes through goal points
                     ax.scatter(x, y, c='white', zorder=4, edgecolor="red",
                                s=100)
-                else:
+                elif j == 0:   # starting laser position
+                    ax.scatter(x, y, c='red', zorder=4, edgecolor="red",
+                               s=10)
+                else:   # all other laser positions
                     ax.scatter(x, y, c='white', zorder=4, edgecolor="red",
                                s=10)
 
@@ -566,10 +568,18 @@ class Puzzle:
 
                     ax.plot([x, x_next], [y, y_next], color="red", linewidth=2)
                 # laser will extend past the last point in the path
-                else:
-                    ax.plot([x, x - rows * self.laser_dir[i][0]],
-                            [y, y - rows * self.laser_dir[i][1]],
+                elif solved is False:
+                    ax.plot([x, x - 2 * rows * - self.laser_dir[i][0]],
+                            [y, y - 2 * rows * self.laser_dir[i][1]],
                             color="red", linewidth=2)
+                # elif j == len(path) - 1 and solved is True and x_next, :
+                #     prev_pos = path[j-1]
+                #     x_prev, y_prev = prev_pos[0], rows * 2 - prev_pos[1]
+                #     x_dir = x - x_prev
+                #     y_dir = y - y_prev
+                #     ax.plot([x, x - 2 * rows * -x_dir],
+                #             [y, y - 2 * rows * -y_dir],
+                #             color="red", linewidth=2)
 
         # edit axes
         ax.set_xlim(-1, cols * 2 + 1)
@@ -619,7 +629,6 @@ class Puzzle:
         plt.title(f"{self.file[:-4]}")
 
         plt.show()
-
 
 if __name__ == "__main__":
     filenames = ['dark_1.bff', 'mad_1.bff', 'mad_4.bff', 'mad_7.bff',
