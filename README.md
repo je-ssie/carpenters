@@ -2,6 +2,14 @@
 
 A Python solver for laser puzzles in board file format (.bff). Given a puzzle with a grid, fixed blocks, laser starting point and direction, goal points, and movable blocks, the code finds the correct placement of blocks so that the laser path passes through all goal points.
 
+## Files
+
+```laserproject.py``` : main project file for solving puzzle
+
+```laser_test.py``` : unit testing file
+
+The repository also contains provided .bff files and the generated solution images. 
+
 ## How It Works
 
 The solver reads a `.bff` file containing:
@@ -42,11 +50,17 @@ if solve:
     p.draw_puzzle(solved=True)  # view the board after solving
 ```
 
-If the puzzle is solved, the solution image is saved as ```{board name} solved.png```.
+If the puzzle is solved, the solution image is saved as ```{board name}_solved.png```.
+
+You can run all provided .bff puzzles by simply running: 
+```bash
+python3 laserproject.py
+```
+It will save the solution images into current folder. 
 
 ## Interpreting solution board
 
-This is the produced solution image for tiny_5.bff:
+This is the produced solution image for ```tiny_5.bff```:
 
 <img width="400" height="300" alt="tiny_5 bff solved" src="https://github.com/user-attachments/assets/8d812bca-38a2-402d-9c4b-532bdebd1aca" />
 
@@ -67,11 +81,11 @@ How to read the board:
 
 ## Testing
 
-All unit tests are in laser_tests.py. Tests verify that all methods produce expected results and handle edge cases.
+All unit tests are in `laser_test.py`. Tests verify that all methods produce expected results and handle edge cases.
 
 To run all tests, run this on terminal or simply run the script on any IDE:
 ```bash 
-python3 laser_tests.py
+python3 laser_test.py
 ```
 
 ## Authors
