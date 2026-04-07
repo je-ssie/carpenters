@@ -10,6 +10,7 @@ Created on Tue Mar 24 15:42:30 2026.
 from itertools import combinations
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from matplotlib.lines import Line2D
 from collections import Counter
 
 
@@ -485,9 +486,7 @@ class Puzzle:
 
     def draw_puzzle(self, solved=False):
         fig, (ax, ax_table) = plt.subplots(1, 2,
-                                           gridspec_kw={'width_ratios': [4, 1],
-                                                        'wspace': 0.2}
-                                           )
+                                           gridspec_kw={'width_ratios': [5, 1],})
 
         rows = len(self.block_grid)
         cols = len(self.block_grid[0])
@@ -507,15 +506,15 @@ class Puzzle:
 
                 if b is not None:   # if there is a block present
                     if b.type == "A":   # reflect
-                        color = "whitesmoke"
+                        color = "lightsteelblue"
                         line_color = 'black'
                         order = 2
                     elif b.type == "B":   # opaque
-                        color = 'dimgrey'
+                        color = 'navy'
                         line_color = 'black'
                         order = 2
                     elif b.type == "C":   # refract
-                        color = 'lightgrey'
+                        color = 'cornflowerblue'
                         line_color = 'black'
                         order = 2
                     elif b.type == "x":   # block not allowed
@@ -555,7 +554,7 @@ class Puzzle:
                                s=100)
                 elif j == 0:   # starting laser position
                     ax.scatter(x, y, c='red', zorder=4, edgecolor="red",
-                               s=10)
+                               s=100)
                 else:   # all other laser positions
                     ax.scatter(x, y, c='white', zorder=4, edgecolor="red",
                                s=10)
@@ -572,14 +571,14 @@ class Puzzle:
                     ax.plot([x, x - 2 * rows * - self.laser_dir[i][0]],
                             [y, y - 2 * rows * self.laser_dir[i][1]],
                             color="red", linewidth=2)
-                # elif j == len(path) - 1 and solved is True and x_next, :
-                #     prev_pos = path[j-1]
-                #     x_prev, y_prev = prev_pos[0], rows * 2 - prev_pos[1]
-                #     x_dir = x - x_prev
-                #     y_dir = y - y_prev
-                #     ax.plot([x, x - 2 * rows * -x_dir],
-                #             [y, y - 2 * rows * -y_dir],
-                #             color="red", linewidth=2)
+                elif self.check_boundary(path[j]) is True:
+                    prev_pos = path[j-1]
+                    x_prev, y_prev = prev_pos[0], rows * 2 - prev_pos[1]
+                    x_dir = x - x_prev
+                    y_dir = y - y_prev
+                    ax.plot([x, x - 2 * rows * -x_dir],
+                            [y, y - 2 * rows * -y_dir],
+                            color="red", linewidth=2)
 
         # edit axes
         ax.set_xlim(-1, cols * 2 + 1)
@@ -588,45 +587,67 @@ class Puzzle:
         ax.axis('off')
         ax_table.axis('off')
 
-        # add what blocks are available to use to a table
-        b_str = self.__str__()
-
+        # add what blocks are to be used/are used to a table
         all_b = [blocks.type for blocks in self.blocks]
-        cell_text = [('Reflect', all_b.count("A"), b_str.count("A")),
-                     ('Opaque', all_b.count("B"), b_str.count("B")),
-                     ('Refract', all_b.count("C"), b_str.count("C"))]
+        cell_text = [('Reflect', all_b.count("A")),
+                     ('Opaque', all_b.count("B")),
+                     ('Refract', all_b.count("C"))]
         table = ax_table.table(cellText=cell_text,
-                               colLabels=["Block", "Total", "Used"],
-                               bbox=[-0.5, 0.55, 1.8, 0.3], cellLoc='center')
-        table.scale(2, 1)
-        table.set_fontsize(10)
+                               colLabels=["Block", "Count"],
+                               bbox=[-0.4, 0.65, 1.8, 0.3], cellLoc='center',
+                               fontsize=10)
+        table.scale(1.5, 1)
 
         # add the legend
-        legend_elements = [patches.Patch(facecolor='whitesmoke',
+        legend_elements = [patches.Patch(facecolor='lightsteelblue',
                                          edgecolor='black',
                                          label='Reflect block'),
-                           patches.Patch(facecolor='dimgrey',
+                           patches.Patch(facecolor='navy',
                                          edgecolor='black',
                                          label='Opaque block'),
-                           patches.Patch(facecolor='lightgrey',
+                           patches.Patch(facecolor='cornflowerblue',
                                          edgecolor='black',
                                          label='Refract block'),
                            patches.Patch(facecolor='darkgrey',
-                                         edgecolor='black',
+                                         edgecolor='gray',
                                          label='No block'),
                            patches.Patch(facecolor='gray',
-                                         edgecolor='black',
-                                         label='No block allowed')]
+                                         edgecolor='gray',
+                                         label='No block allowed'),
+                           Line2D([0], [0], color='red', lw=2,
+                                  label='Laser Path'),
+                           Line2D([0], [0], marker='o', color='w',
+                                  markerfacecolor='red', markeredgecolor='red',
+                                  markersize=8, label='Laser Start'),
+                           Line2D([0], [0], marker='o', color='w',
+                                  markerfacecolor='white',
+                                  markeredgecolor='red',
+                                  markersize=3, label='Laser Position'),
+                           Line2D([0], [0], marker='o', color='w',
+                                  markerfacecolor='black',
+                                  markeredgecolor='black', markersize=8,
+                                  label='Goal'),
+                           Line2D([0], [0], marker='o', color='w',
+                                  markerfacecolor='white',
+                                  markeredgecolor='red',
+                                  markersize=8, label='Laser Hits Goal')]
+
         ax_table.legend(handles=legend_elements, loc='upper center',
-                        frameon=False, bbox_to_anchor=(0.5, 0.45), fontsize=10)
+                        frameon=False,
+                        bbox_to_anchor=(0.52, 0.65),
+                        fontsize=9, handlelength=1,
+                        handleheight=1)
 
         # naming the plot and saving based on if puzzle is solved
+        title = self.file[:-4].split("_")
+
         if solved:
             plt.savefig(f"{self.file} solved.png")
-            plt.title(f"{self.file[:-4]} solved")
-
-        # plt.savefig(f"{self.file}.png")
-        plt.title(f"{self.file[:-4]}")
+            ax.set_title(f"{title[0].capitalize()}: {title[1]} Solution",
+                         fontsize=15)
+        else:
+            ax.set_title(f"{title[0].capitalize()}: {title[1]}",
+                         fontsize=15)
 
         plt.show()
 
@@ -634,13 +655,7 @@ if __name__ == "__main__":
     filenames = ['dark_1.bff', 'mad_1.bff', 'mad_4.bff', 'mad_7.bff',
                  'numbered_6.bff', 'showstopper_4.bff', 'tiny_5.bff',
                  'yarn_5.bff']
-    p = Puzzle(filenames[2])
-    # p.block_grid = [[None, None, Refract((2, 0), True), None],
-    #                 [None, None, None, Reflect((3, 1), True)],
-    #                 [Reflect((0, 2), True), None, None, None],
-    #                 [None, None, None, None]]
-    # p.laser_pos = [[(2, 7), (6, 3), (5, 2), (4, 1), (3, 0)],
-    #                [(5, 2), (4, 3), (2, 5), (4, 7)]]
-    # p.laser_dir = [(1, -1), (-1, 1), (1, 1)]
+    p = Puzzle(filenames[4])
     p.draw_puzzle()
-    # print(p)
+    p.solve_puzzle()
+    p.draw_puzzle(solved=True)
