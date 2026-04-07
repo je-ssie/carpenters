@@ -125,7 +125,7 @@ class Reflect(Block):
         direction and the face of the block that is hit.
     """
 
-    def __init__(self, position, fixed = False):
+    def __init__(self, position, fixed=False):
         """
         Initialize an instance of the Reflect block.
 
@@ -474,7 +474,7 @@ class Puzzle:
 
         # target positions for solution (list of tuples)
         self.goal_coords = []
-        
+
         self.block_lookup = {}
 
         # read in the file
@@ -1118,14 +1118,15 @@ class Puzzle:
                 #     else:
                 #         pass
 
-        # edit axes
+        # Formatting.
         ax.set_xlim(-1, cols * 2 + 1)
         ax.set_ylim(-1, rows * 2 + 1)
         ax.set_aspect('equal')
         ax.axis('off')
         ax_table.axis('off')
 
-        # add what blocks are to be used/are used to a table
+        # Create the block count table.
+        # Add what blocks are to be used/are used to a table.
         all_b = [blocks.type for blocks in self.blocks]
         cell_text = [('Reflect', all_b.count("A")),
                      ('Opaque', all_b.count("B")),
@@ -1136,7 +1137,7 @@ class Puzzle:
                                fontsize=10)
         table.scale(1.5, 1)
 
-        # add the legend
+        # Add the legend
         legend_elements = [patches.Patch(facecolor='lightsteelblue',
                                          edgecolor='black',
                                          label='Reflect Block'),
@@ -1176,7 +1177,7 @@ class Puzzle:
                         fontsize=9, handlelength=1,
                         handleheight=1)
 
-        # naming the plot and saving based on if puzzle is solved
+        # Naming the plot and saving based on if puzzle is solved.
         title = self.file[:-4].split("_")
 
         if solved:
@@ -1273,11 +1274,11 @@ if __name__ == "__main__":
                  'numbered_6.bff', 'showstopper_4.bff', 'tiny_5.bff',
                  'yarn_5.bff']
     p = Puzzle(filenames[6])
-    #p.draw_puzzle()
+    # p.draw_puzzle()
     p.solve_puzzle()
     p.draw_puzzle(solved=True)
-    #p.save_solution()
-    
+    # p.save_solution()
+
     p2 = Puzzle("tiny_5_solution.bff")
     p2.draw_puzzle(solved=True)
     # print(p2.laser_dir)
