@@ -9,6 +9,7 @@ Created on Mon Apr  6 11:10:49 2026.
 import unittest
 from laserproject import *
 from unittest.mock import patch, MagicMock
+import os
 
 
 class TestPuzzle(unittest.TestCase):
@@ -1230,7 +1231,7 @@ class TestDrawPuzzle(unittest.TestCase):
         self.puzzle.draw_puzzle(solved=True)
 
         # When solved=True, the figure should be saved with a filename
-        mock_savefig.assert_called_once_with("mad_1.bff solved.png")
+        mock_savefig.assert_called_once_with("mad_1_solved.png")
 
     @patch("laserproject.plt.show")
     @patch("laserproject.plt.subplots")
@@ -1282,6 +1283,178 @@ class TestDrawPuzzle(unittest.TestCase):
         ax.set_aspect.assert_called_with('equal')
         ax.axis.assert_called_with('off')
         ax_table.axis.assert_called_with('off')
+
+
+class TestSaveSolution(unittest.TestCase):
+    """
+    Unit tests for the save_solution method.
+
+    These tests verify correct file creation, formatting of the output .bff
+    file, handling of missing solutions, and correct writing of grid, blocks,
+    laser paths, and goal coordinates.
+    """
+
+    def create_empty_puzzle(self):
+        """
+        Create a Puzzle instance without reading from a file so attributes
+        can be manually assigned for testing.
+        """
+        return Puzzle(file=None)
+
+    def create_mock_block(self, block_type, fixed=False):
+        """
+        Create a mock block with required attributes.
+
+        Parameters
+        ----------
+        block_type : str
+            Block type ('A', 'B', 'C')
+        fixed : bool
+            Whether block is fixed.
+
+        Returns
+        -------
+        block : MagicMock
+        """
+        block = MagicMock()
+        block.type = block_type
+        block.fixed = fixed
+        return block
+
+    def setUp(self):
+        """Set up a simple puzzle configuration for testing save_solution."""
+        self.p = self.create_empty_puzzle()
+        self.p.file = "test.bff"
+
+        # 2x2 grid
+        self.p.block_grid = [
+            [self.create_mock_block('A'), None],
+            [None, self.create_mock_block('B')]
+        ]
+
+        # Blocks (mix of fixed and movable)
+        self.p.blocks = [
+            self.create_mock_block('A', fixed=False),
+            self.create_mock_block('A', fixed=True),
+            self.create_mock_block('B', fixed=False)
+        ]
+
+        # Laser solution exists.
+        self.p.laser_dir = [(1, 0)]
+
+        # Laser paths.
+        self.p.laser_pos = [
+            [(0, 0), (1, 0), (2, 0)],  # Valid path
+            [(1, 1)]  # Should be ignored (too short)
+        ]
+
+        # Goal coordinates.
+        self.p.goal_coords = [(3, 3)]
+
+    def tearDown(self):
+        """Remove generated solution file after each test."""
+        filename = "test_solution.bff"
+        if os.path.exists(filename):
+            os.remove(filename)
+
+    def test_save_solution_raises_error_no_solution(self):
+        """Test that ValueError is raised when no solution exists."""
+        self.p.laser_dir = None
+
+        with self.assertRaises(ValueError):
+            self.p.save_solution()
+
+    def test_save_solution_creates_file(self):
+        """Test that the solution file is created with correct name."""
+        self.p.save_solution()
+
+        self.assertTrue(os.path.exists("test_solution.bff"))
+
+    def test_save_solution_writes_grid(self):
+        """Test that the grid section is written correctly."""
+        self.p.save_solution()
+
+        with open("test_solution.bff", "r") as f:
+            content = f.read()
+
+        # Check markers
+        self.assertIn("GRID START", content)
+        self.assertIn("GRID STOP", content)
+
+        # Check grid layout
+        self.assertIn("A o", content)
+        self.assertIn("o B", content)
+
+    def test_save_solution_counts_movable_blocks(self):
+        """Test that only movable (non-fixed) blocks are counted."""
+        self.p.save_solution()
+
+        with open("test_solution.bff", "r") as f:
+            content = f.read()
+
+        # Only non-fixed blocks counted.
+        self.assertIn("A 1", content)
+        self.assertIn("B 1", content)
+
+    def test_save_solution_laser_output(self):
+        """Test that laser paths are written with correct direction vectors."""
+        self.p.save_solution()
+
+        with open("test_solution.bff", "r") as f:
+            content = f.read()
+
+        # Direction from (0,0) -> (1,0) is (1,0).
+        self.assertIn("L 0 0 1 0", content)
+        self.assertIn("L 1 0 1 0", content)
+        self.assertIn("L 2 0 1 0", content)
+
+        # Short path should not appear.
+        self.assertNotIn("L 1 1", content)
+
+    def test_save_solution_goal_coordinates(self):
+        """Test that goal coordinates are written correctly."""
+        self.p.save_solution()
+
+        with open("test_solution.bff", "r") as f:
+            content = f.read()
+
+        self.assertIn("P 3 3", content)
+
+    def test_save_solution_empty_movable_counts(self):
+        """Test no block count line is written if no movable blocks exist."""
+        # Make all blocks fixed.
+        for block in self.p.blocks:
+            block.fixed = True
+
+        self.p.save_solution()
+
+        with open("test_solution.bff", "r") as f:
+            content = f.read()
+
+        # Extract section between GRID STOP and first laser line.
+        parts = content.split("GRID STOP")
+        after_grid = parts[1]
+
+        # Split before lasers (L lines).
+        counts_section = after_grid.split("L")[0]
+
+        # Now check ONLY the counts section.
+        self.assertNotIn("A ", counts_section)
+        self.assertNotIn("B ", counts_section)
+        self.assertNotIn("C ", counts_section)
+
+    def test_save_solution_multiple_goals(self):
+        """Test writing multiple goal coordinates."""
+        self.p.goal_coords = [(1, 1), (2, 2), (3, 3)]
+
+        self.p.save_solution()
+
+        with open("test_solution.bff", "r") as f:
+            content = f.read()
+
+        self.assertIn("P 1 1", content)
+        self.assertIn("P 2 2", content)
+        self.assertIn("P 3 3", content)
 
 
 if __name__ == "__main__":
