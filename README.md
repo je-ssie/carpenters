@@ -44,6 +44,27 @@ if solve:
 
 If the puzzle is solved, the solution image is saved as ```{board name} solved.png```.
 
+## Interpreting solution board
+
+This is the produced solution image for tiny_5.bff:
+
+<img width="400" height="300" alt="tiny_5 bff solved" src="https://github.com/user-attachments/assets/8d812bca-38a2-402d-9c4b-532bdebd1aca" />
+
+The laser point coordinate system works as follows: 
+- upper left corner is the origin (0,0), where +x is to the right and +y is towards the bottom.
+- every half of a block is one coordinate unit.
+
+How to read the board:
+- Using this coordinate system, the starting laser point (filled red dot) is at coordinate ```(4, 5)```.
+- As per the legend, the starting point is on the face of a ```Refract``` block. Therefore the laser splits its path to two, one going through the block along the initial direction and one reflecting off of the block into another direction. The laser points along each path is marked by the small white dots, and are connected by red lines to indicate its path.
+- The goal points are marked by bigger white circles, and are positioned at ```(1, 2)```, ```(6, 3)```. The red laser paths pass through all goal points, confirming that it is a solution.
+- The solution block placements can clearly be read from the image. For this board, the block grid in .bff-style would be:
+  ```bash
+  A B A
+  o o o
+  A C o
+  ```
+
 ## Testing
 
 All unit tests are in laser_tests.py. Tests verify that all methods produce expected results and handle edge cases.
