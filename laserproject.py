@@ -11,10 +11,24 @@ from itertools import combinations
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.lines import Line2D
-from collections import Counter
 
 
 class Block:
+    """
+    Class description
+
+    Attributes
+    ----------
+    position : 
+        description
+    fixed :
+        description
+    
+    Methods
+    -------
+    
+    """
+    
     def __init__(self, position, fixed = False):
         self.position = position
         self.fixed = fixed
@@ -138,92 +152,114 @@ class Puzzle:
         if file is not None:
             self.read_bff(file)
 
-    def read_bff(self, file):
-        # read in .bff and assign attributes
-        # initialize attributes
-        block_grid = []
+    def read_file_lines(self, file):
+        with open(file, "r") as f:
+            # read in lines and strip the new line ending
+            lines = [line.rstrip('\n') for line in f.readlines()]
+        
+        # removing new lines
+        return [line for line in lines if line != ""]
+    
+    def split_sections(self, lines):
+        # find the indices for the beginning and end of the grid
+        grid_start = lines.index("GRID START")
+        grid_stop = lines.index("GRID STOP")
+        
+        # get only the lines corresponding with the board grid
+        grid_lines = lines[grid_start+1:grid_stop]
+        other_lines = lines[grid_stop+1:]
+        return grid_lines, other_lines
+    
+    def parse_grid(self, grid_lines):
+        # split each row to get the 2D rep of the grid from the bff file
+        block_grid = [line.split() for line in grid_lines]
+        
+        # initialize blocks list
         blocks = []
+        
+        # loop through block_grid and replace the string rep with objects
+        # add all the blocks (reflect, refract, opaque) to the blocks list
+        for i in range(len(block_grid)):   # row
+            for j in range(len(block_grid[0])):   # column
+                block = block_grid[i][j]
+
+                if block == 'x':
+                    b = Transparent([i, j], True)
+                    block_grid[i][j] = Transparent([i, j], True)
+                elif block == 'o':
+                    block_grid[i][j] = None
+                elif block == 'A':
+                    b = Reflect([i, j], True)
+                    block_grid[i][j] = b
+                    blocks.append(b)
+                elif block == 'B':
+                    b = Opaque([i, j], True)
+                    block_grid[i][j] = b
+                    blocks.append(b)
+                elif block == 'C':
+                    b = Refract([i, j], True)
+                    block_grid[i][j] = b
+                    blocks.append(b)
+            
+        return block_grid, blocks
+    
+    def parse_rest(self, lines, blocks):
+        # initialize laser positions, laser directions, goal coordinates lists
         laser_pos = []
         laser_dir = []
         goal_coords = []
+        
+        for line in lines:
+            # split the line by space
+            split_line = line.split()
+            
+            # if new line or not a block,laser point, or goal coordinate
+            if not split_line:
+                continue
+            
+            # indicator
+            indicator = split_line[0]
+            
+            # add the specified amount of the block to the blocks list
+            if indicator in ('A', 'B', 'C'):
+                count = int(split_line[1])
+                block_dict = {'A': Reflect, 'B': Opaque, 'C': Refract}
+                block = block_dict[indicator]
+                blocks += [block(None, False) for _ in range(count)]
+            
+            # add the specified lasers to their respective laser lists
+            # order of the list is ["L", x, y, vx, vy]
+            elif indicator == 'L':
+                laser_pos.append(
+                    [(int(split_line[1]), int(split_line[2]))])
+                laser_dir.append(
+                    (int(split_line[3]), int(split_line[4])))
 
-        # for block_grid, if it is an empty cell leave it as None type
+            # add the specified points lasers need to intersect
+            elif indicator == 'P':
+                goal_coords.append(
+                    (int(split_line[1]), int(split_line[2])))
+        
+        return blocks, laser_pos, laser_dir, goal_coords
 
-        with open(file, "r") as f:
-            lines = [line.rstrip('\n') for line in f.readlines()]
-            # removing new lines
-            lines = [line for line in lines if line != ""]
+    def read_bff(self, file):
+        # read in .bff and assign attributes
+        lines = self.read_file_lines(file)
+        
+        # get the lines corresponding with the board, laser, and goal
+        grid_lines, other_lines = self.split_sections(lines)
+        
+        block_grid, blocks = self.parse_grid(grid_lines)
 
-            # find the indices for the beginning and end of the grid
-            grid_start = lines.index("GRID START")
-            grid_stop = lines.index("GRID STOP")
+        blocks, laser_pos, laser_dir, goal_coords = self.parse_rest(
+                                    other_lines, blocks)
 
-            # split each row to get the 2D rep of the grid from the bff file
-            block_grid = [line.split()
-                          for line in lines[grid_start+1:grid_stop]]
-
-            # loop through block_grid and replace the string rep with objects
-            # add all the blocks (reflect, refract, opaque) to the blocks list
-            for i in range(len(block_grid)):   # row
-                for j in range(len(block_grid[0])):   # column
-
-                    block = block_grid[i][j]
-
-                    if block == 'x':
-                        b = Transparent([i, j], True)
-                        block_grid[i][j] = b
-                    elif block == 'o':
-                        block_grid[i][j] = None
-                    elif block == 'A':
-                        b = Reflect([i, j], True)
-                        block_grid[i][j] = b
-                        blocks.append(b)
-                    elif block == 'B':
-                        b = Opaque([i, j], True)
-                        block_grid[i][j] = b
-                        blocks.append(b)
-                    elif block == 'C':
-                        b = Refract([i, j], True)
-                        block_grid[i][j] = b
-                        blocks.append(b)
-
-            # loop through the rest of the file
-            for line in lines[grid_stop+1:]:
-                # split the line by space
-                split_line = line.split()
-                # if new line
-                if split_line == []:
-                    continue
-                # add the specified amount of the block to the blocks list
-                elif split_line[0] == 'A':
-                    num_A = int(split_line[1])
-                    blocks += [Reflect(None, False) for i in range(num_A)]
-                elif split_line[0] == 'B':
-                    num_B = int(split_line[1])
-                    blocks += [Opaque(None, False) for i in range(num_B)]
-                elif split_line[0] == 'C':
-                    num_C = int(split_line[1])
-                    blocks += [Refract(None, False) for i in range(num_C)]
-
-                # add the specified lasers to their respective laser lists
-                # order of the list is ["L", x, y, vx, vy]
-                elif split_line[0] == 'L':
-                    laser_pos.append(
-                        [(int(split_line[1]), int(split_line[2]))])
-                    laser_dir.append(
-                        (int(split_line[3]), int(split_line[4])))
-
-                # add the specified points lasers need to intersect
-                elif split_line[0] == 'P':
-                    goal_coords.append(
-                        (int(split_line[1]), int(split_line[2])))
-
-            # update attributes
-            self.block_grid = [row[:] for row in block_grid]
-            self.blocks = blocks[:]
-            self.laser_pos = [laser[:] for laser in laser_pos]
-            self.laser_dir = laser_dir[:]
-            self.goal_coords = goal_coords[:]
+        # update attributes with copies of the lists
+        self.block_grid = [row[:] for row in block_grid]
+        self.blocks = blocks[:]
+        self.laser_pos = [laser[:] for laser in laser_pos]
+        self.laser_dir = laser_dir[:]
+        self.goal_coords = goal_coords[:]
 
     def get_configurations(self):
         avail_pos = []
@@ -466,24 +502,7 @@ class Puzzle:
             
         
         return [pos[1:] for pos in laser_pos], laser_dir
-
-    def __str__(self):
-        # might delete, feels useless
-        grid_str = ""   # initialize str for grid
-
-        for row in self.block_grid:   # loop through all blocks in the grid
-            row_str = ""   # intialize str for row
-
-            for col in row:   # add o for empty space or type of block
-                if col is None:
-                    row_str += "o "
-                else:
-                    row_str += f"{col.type} "
-
-            grid_str += row_str.strip() + "\n"   # add row to grid
-
-        return grid_str
-
+    
     def draw_puzzle(self, solved=False):
         fig, (ax, ax_table) = plt.subplots(1, 2,
                                            gridspec_kw={'width_ratios': [5, 1],})
@@ -594,26 +613,26 @@ class Puzzle:
                      ('Refract', all_b.count("C"))]
         table = ax_table.table(cellText=cell_text,
                                colLabels=["Block", "Count"],
-                               bbox=[-0.4, 0.65, 1.8, 0.3], cellLoc='center',
+                               bbox=[-0.4, 0.6, 1.8, 0.3], cellLoc='center',
                                fontsize=10)
         table.scale(1.5, 1)
 
         # add the legend
         legend_elements = [patches.Patch(facecolor='lightsteelblue',
                                          edgecolor='black',
-                                         label='Reflect block'),
+                                         label='Reflect Block'),
                            patches.Patch(facecolor='navy',
                                          edgecolor='black',
-                                         label='Opaque block'),
+                                         label='Opaque Block'),
                            patches.Patch(facecolor='cornflowerblue',
                                          edgecolor='black',
-                                         label='Refract block'),
+                                         label='Refract Block'),
                            patches.Patch(facecolor='darkgrey',
                                          edgecolor='gray',
-                                         label='No block'),
+                                         label='No Block'),
                            patches.Patch(facecolor='gray',
                                          edgecolor='gray',
-                                         label='No block allowed'),
+                                         label='No Block Allowed'),
                            Line2D([0], [0], color='red', lw=2,
                                   label='Laser Path'),
                            Line2D([0], [0], marker='o', color='w',
@@ -634,7 +653,7 @@ class Puzzle:
 
         ax_table.legend(handles=legend_elements, loc='upper center',
                         frameon=False,
-                        bbox_to_anchor=(0.52, 0.65),
+                        bbox_to_anchor=(0.52, 0.6),
                         fontsize=9, handlelength=1,
                         handleheight=1)
 
@@ -655,7 +674,7 @@ if __name__ == "__main__":
     filenames = ['dark_1.bff', 'mad_1.bff', 'mad_4.bff', 'mad_7.bff',
                  'numbered_6.bff', 'showstopper_4.bff', 'tiny_5.bff',
                  'yarn_5.bff']
-    p = Puzzle(filenames[4])
+    p = Puzzle(filenames[0])
     p.draw_puzzle()
     p.solve_puzzle()
     p.draw_puzzle(solved=True)
