@@ -1200,98 +1200,21 @@ class Puzzle:
 
         plt.show()
 
-    def save_solution(self):
-        """
-        Save the solved puzzle in .bff format.
-
-        Raises
-        ------
-        ValueError
-            No solution has been given.
-
-        Returns
-        -------
-        None.
-
-        """
-        # self.laser_dir will have None if it has been solved.
-        if not self.laser_dir:
-            raise ValueError("No solution to save. Run solve_puzzle() first.")
-
-        filename = self.file[:-4] + "_solution.bff"
-
-        with open(filename, "w") as f:
-
-            # Write the board grid section.
-            f.write("GRID START\n")
-
-            # Iterate through the block grid and add each cell type.
-            for row in self.block_grid:
-                line = []
-                for cell in row:
-                    if cell is None:
-                        line.append('o')
-                    else:
-                        line.append(cell.type)
-                f.write(" ".join(line) + "\n")
-
-            f.write("GRID STOP\n\n")
-
-            # Count the movable counts (specified blocks).
-            movable_counts = {'A': 0, 'B': 0, 'C': 0}
-
-            # Iterate through all the blocks used.
-            for block in self.blocks:
-                # Add the block to the movable blocks if it is not fixed.
-                if not block.fixed:
-                    movable_counts[block.type] += 1
-
-            # Write movable block counts.
-            for btype in ['A', 'B', 'C']:
-                if movable_counts[btype] > 0:
-                    f.write(f"{btype} {movable_counts[btype]}\n")
-
-            f.write("\n")
-
-            # Write the laser positions and directions.
-            for i, path in enumerate(self.laser_pos):
-
-                # Need at least 2 points to infer direction.
-                if len(path) < 2:
-                    continue
-
-                # Infer direction from first two positions in the path.
-                x0, y0 = path[0]
-                x1, y1 = path[1]
-
-                vx = x1 - x0
-                vy = y1 - y0
-
-                # Starting point of the laser (first coordinate in path).
-                start_x, start_y = path[0]
-
-                # Add every point with that direction to the file.
-                for j, pos in enumerate(path):
-                    f.write(f"L {pos[0]} {pos[1]} {vx} {vy}\n")
-
-            # Write the goal coordinates
-            for coord in self.goal_coords:
-                f.write(f"P {coord[0]} {coord[1]}\n")
-
 
 if __name__ == "__main__":
     filenames = ['dark_1.bff', 'mad_1.bff', 'mad_4.bff', 'mad_7.bff',
                  'numbered_6.bff', 'showstopper_4.bff', 'tiny_5.bff',
                  'yarn_5.bff']
-    # p = Puzzle(filenames[6])
-    # # p.draw_puzzle()
-    # p.solve_puzzle()
-    # p.draw_puzzle(solved=True)
-    # # p.save_solution()
+    
+    for file in filenames:
+        
+        p = Puzzle(file)
+        
+        # p.draw_puzzle() # for seeing initial board set up
+        
+        solve = p.solve_puzzle()
+        
+        if solve:
+            p.draw_puzzle(solved=True)
 
-    # p2 = Puzzle("tiny_5_solution.bff")
-    # p2.draw_puzzle(solved=True)
-    # print(p2.laser_dir)
-    # print(p2.laser_pos)
 
-    p3 = Puzzle('rat_9')
