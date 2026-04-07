@@ -15,73 +15,242 @@ from matplotlib.lines import Line2D
 
 class Block:
     """
-    Class description
+    Base class representing a generic block on the puzzle grid.
+
+    A Block has a position on the grid and may be fixed.
+    Subclasses define specific behaviors when interacting with a laser.
 
     Attributes
     ----------
-    position : 
-        description
-    fixed :
-        description
-    
+    position : tuple of int
+        The (row, column) position of the block on the grid.
+    fixed : bool
+        Whether the block is fixed in place and cannot be moved.
+
     Methods
     -------
-    
+    get_all_faces()
+        Returns the coordinates of the four faces (sides) of the block.
+    set_position(new_pos)
+        Updates the block's position if it is not fixed.
     """
-    
-    def __init__(self, position, fixed = False):
+
+    def __init__(self, position, fixed=False):
+        """
+        Initialize an instance of the Block class with a position.
+
+        Parameters
+        ----------
+        position : tuple of int
+            The (rw, column) position of the block on the grid..
+        fixed : book, optional
+            Whether the block is fixed in place and cannot be moved.
+            The default is False.
+
+        Returns
+        -------
+        None.
+
+        """
         self.position = position
         self.fixed = fixed
 
     def get_all_faces(self):
+        """
+        Compute the coordinates of the four faces of the block.
+
+        The block is treated as occupying a 2x2 unit in a finer grid,
+        so each block position is scaled accordingly to determine face
+        locations.
+
+        Returns
+        -------
+        dict
+            A dictionary mapping face coordinates (tuple) to face labels:
+            "left", "right", "top", and "bottom".
+        """
         by, bx = self.position
+
+        # Scale block position to a finer grid representation.
         x = bx * 2
         y = by * 2
-        return {(x, y + 1): "left", 
-                (x + 2, y + 1): "right", 
-                (x + 1, y): "top", 
-                (x + 1, y + 2): "bottom"}
+
+        # Map each face coordinate to its corresponding face label
+        return {(x, y + 1): "left", (x + 2, y + 1): "right",
+                (x + 1, y): "top", (x + 1, y + 2): "bottom"}
 
     def set_position(self, new_pos):
+        """
+        Set a new position for the block.
 
-        assert self.fixed != True, "Trying to move a fixed block."
+        Parameters
+        ----------
+        new_pos : tuple of int
+            The new (row, column) position to assign to the block.
+
+        Raises
+        ------
+        AssertionError
+            If the block is fixed and cannot be moved.
+        """
+        # Prevent moving fixed block.
+        assert self.fixed is not True, "Trying to move a fixed block."
 
         self.position = new_pos
 
 
 class Reflect(Block):
+    """
+    Block that reflects a laser.
+
+    A reflect block changes the direction of an incoming laser depending
+    on which face it hits.
+
+    Parameters
+    ----------
+    position : tuple of int
+        The (row, column) position of the block.
+    fixed : bool, optional
+        Whether the block is fixed in place (default is False).
+
+    Attributes
+    ----------
+    type : str
+        Identifier for the block type ("A").
+
+    Methods
+    -------
+    laser_directions(vx, vy, face)
+        Returns the reflected laser direction(s) based on the incoming
+        direction and the face of the block that is hit.
+    """
 
     def __init__(self, position, fixed = False):
+        """
+        Initialize an instance of the Reflect block.
+
+        Parameters
+        ----------
+        position : tuple of int
+            The (row, column) position of the block.
+        fixed : bool, optional
+            Whether the block is fixed in place. The default is False.
+
+        Returns
+        -------
+        None.
+
+        """
         super().__init__(position, fixed)
         self.type = "A"
 
     def laser_directions(self, vx, vy, face):
-        # may need to change arguments based on how we code main part
+        """
+        Compute the outgoing laser direction(s) after hitting a reflect block.
 
-        # to store new direction of laser after collision
+        The laser is reflected depending which face it hits. Inverted vertical
+        direction for top/bottom and inverted horizontal direction for
+        left/right.
+
+        Parameters
+        ----------
+        vx : int
+            Horizontal component of the incoming laser direction.
+        vy : int
+            Vertical component of the incoming laser direction.
+        face : str
+            The face of the block that the laser hits ("top", "bottom", "left",
+                                                       "right").
+
+        Returns
+        -------
+        list of tuple
+            A list containing the reflected laser direction as (vx, vy).
+        """
+        # Inialize a list to store new direction of laser after collision.
         new_dir = []
 
         if (face == "top") or (face == "bottom"):
+            # Reflect vertically.
             new_dir.append((vx, -vy))
         elif (face == "left") or (face == "right"):
+            # Reflect horizontally.
             new_dir.append((-vx, vy))
 
         return new_dir
 
 
 class Refract(Block):
+    """
+    Block that both reflects a laser and lets it pass through.
 
-    def __init__(self, position, fixed = False):
+    A refract block allows the laser to continue in its original direction
+    while also producing a reflected beam.
+
+    Parameters
+    ----------
+    position : tuple of int
+        The (row, column) position of the block.
+    fixed : bool, optional
+        Whether the block is fixed in place (default is False).
+
+    Attributes
+    ----------
+    type : str
+        Identifier for the block type ("C").
+
+    Methods
+    -------
+    laser_directions(vx, vy, face)
+        Returns both the transmitted and reflected laser directions.
+    """
+
+    def __init__(self, position, fixed=False):
+        """
+        Initialize an instance of the Refract block.
+
+        Parameters
+        ----------
+        position : tuple of int
+            The (row, column) position of the block.
+        fixed : bool, optional
+            Whether the block is fixed in place (default is False).
+
+        Returns
+        -------
+        None.
+
+        """
         super().__init__(position, fixed)
         self.type = "C"
 
     def laser_directions(self, vx, vy, face):
-        # may need to change arguments based on how we code main part
+        """
+        Compute the outgoing laser directions after hitting a refract block.
 
-        # to store new direction of laser after collision
-        # for refract block, one laser path stays in the same direction
+        The laser produces two paths:
+        1. The original direction (transmission)
+        2. A reflected direction depending on the face it hits
+
+        Parameters
+        ----------
+        vx : int
+            Horizontal component of the incoming laser direction.
+        vy : int
+            Vertical component of the incoming laser direction.
+        face : str
+            The face of the block that the laser hits.
+
+        Returns
+        -------
+        list of tuple
+            A list of outgoing laser directions.
+        """
+        # Inialize a list to store new direction of laser after collision.
+        # For refract block, one laser path stays in the same direction.
         new_dir = [(vx, vy)]
 
+        # Add reflected direction based on face.
         if (face == "top") or (face == "bottom"):
             new_dir.append((vx, -vy))
         elif (face == "left") or (face == "right"):
@@ -91,29 +260,134 @@ class Refract(Block):
 
 
 class Opaque(Block):
+    """
+    Block that absorbs a laser beam meaning no laser continues past this block.
+
+    Parameters
+    ----------
+    position : tuple of int
+        The (row, column) position of the block.
+    fixed : bool, optional
+        Whether the block is fixed in place (default is False).
+
+    Attributes
+    ----------
+    type : str
+        Identifier for the block type ("B").
+
+    Methods
+    -------
+    laser_directions(vx, vy, face)
+        Returns None since the laser is absorbed.
+    """
 
     def __init__(self, position, fixed=False):
+        """
+        Initialize an instance of the Opaque block.
+
+        Parameters
+        ----------
+        position : tuple of int
+            The (row, column) position of the block.
+        fixed : bool, optional
+            Whether the block is fixed in place (default is False).
+
+        Returns
+        -------
+        None.
+
+        """
         super().__init__(position, fixed)
         self.type = "B"
 
     def laser_directions(self, vx, vy, face):
+        """
+        Determine laser behavior upon hitting an opaque block.
 
-        # no laser path after collision with opaque block
+        The laser is fully absorbed and does not continue.
+
+        Parameters
+        ----------
+        vx : int
+            Horizontal component of the incoming laser direction.
+        vy : int
+            Vertical component of the incoming laser direction.
+        face : str
+            The face of the block that the laser hits.
+
+        Returns
+        -------
+        None
+            Indicates that no laser exits the block.
+        """
+        # No laser path after collision with opaque block.
         new_dir = None
 
         return new_dir
 
 
 class Transparent(Block):
+    """
+    Block that allows a laser to pass through without changing direction.
+
+    Parameters
+    ----------
+    position : tuple of int
+        The (row, column) position of the block.
+    fixed : bool, optional
+        Whether the block is fixed in place (default is True).
+
+    Attributes
+    ----------
+    type : str
+        Identifier for the block type ("x").
+
+    Methods
+    -------
+    laser_directions(vx, vy, face)
+        Returns the unchanged laser direction.
+    """
 
     def __init__(self, position, fixed=True):
+        """
+        Initialize an instance of the Transparent block.
+
+        Parameters
+        ----------
+        position : tuple of int
+            The (row, column) position of the block.
+        fixed : bool, optional
+            Whether the block is fixed in place (default is True).
+
+        Returns
+        -------
+        None.
+
+        """
         super().__init__(position, fixed)
         self.type = "x"
 
     def laser_directions(self, vx, vy, face):
+        """
+        Compute the laser direction after passing through a transparent block.
 
-        # to store new direction of laser after collision
-        # laser passes through block
+        The laser continues in the same direction.
+
+        Parameters
+        ----------
+        vx : int
+            Horizontal component of the incoming laser direction.
+        vy : int
+            Vertical component of the incoming laser direction.
+        face : str
+            The face of the block that the laser hits.
+
+        Returns
+        -------
+        list of tuple
+            A list containing the unchanged laser direction.
+        """
+        # Laser passes through block with direction unchanged.
         new_dir = [(vx, vy)]
 
         return new_dir
