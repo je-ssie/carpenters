@@ -634,26 +634,44 @@ class Puzzle:
         -------
         None.
 
+        Raises
+        ------
+        FileNotFoundError
+            If the file does not exist.
+        ValueError
+            If the file contents are malformed.
+        Exception
+            For any unexpected errors during parsing.
         """
-        # Read in .bff and assign attributes.
-        lines = self.read_file_lines(file)
+        try:
+            # Read in .bff and assign attributes.
+            lines = self.read_file_lines(file)
 
-        # Get the lines corresponding with the board and other section.
-        grid_lines, other_lines = self.split_sections(lines)
+            # Get the lines corresponding with the board and other section.
+            grid_lines, other_lines = self.split_sections(lines)
 
-        # Get the block grid and blocks used.
-        block_grid, blocks = self.parse_grid(grid_lines)
+            # Get the block grid and blocks used.
+            block_grid, blocks = self.parse_grid(grid_lines)
 
-        # Get blocks, laser_pos, laser_dir, goal_coords.
-        blocks, laser_pos, laser_dir, goal_coords = self.parse_rest(
-            other_lines, blocks)
+            # Get blocks, laser_pos, laser_dir, goal_coords.
+            blocks, laser_pos, laser_dir, goal_coords = self.parse_rest(
+                other_lines, blocks)
 
-        # Update attributes with copies of the lists.
-        self.block_grid = [row[:] for row in block_grid]
-        self.blocks = blocks[:]
-        self.laser_pos = [laser[:] for laser in laser_pos]
-        self.laser_dir = laser_dir[:]
-        self.goal_coords = goal_coords[:]
+            # Update attributes with copies of the lists.
+            self.block_grid = [row[:] for row in block_grid]
+            self.blocks = blocks[:]
+            self.laser_pos = [laser[:] for laser in laser_pos]
+            self.laser_dir = laser_dir[:]
+            self.goal_coords = goal_coords[:]
+
+        except FileNotFoundError:
+            print(f"File '{file}' could not be found.")
+
+        except ValueError as ve:
+            print(f"Error parsing '{file}': {ve}")
+
+        except Exception as e:
+            print(f"Unexpected error while reading '{file}': {e}")
 
     def get_configurations(self):
         """
@@ -1273,13 +1291,15 @@ if __name__ == "__main__":
     filenames = ['dark_1.bff', 'mad_1.bff', 'mad_4.bff', 'mad_7.bff',
                  'numbered_6.bff', 'showstopper_4.bff', 'tiny_5.bff',
                  'yarn_5.bff']
-    p = Puzzle(filenames[6])
-    # p.draw_puzzle()
-    p.solve_puzzle()
-    p.draw_puzzle(solved=True)
-    # p.save_solution()
+    # p = Puzzle(filenames[6])
+    # # p.draw_puzzle()
+    # p.solve_puzzle()
+    # p.draw_puzzle(solved=True)
+    # # p.save_solution()
 
-    p2 = Puzzle("tiny_5_solution.bff")
-    p2.draw_puzzle(solved=True)
+    # p2 = Puzzle("tiny_5_solution.bff")
+    # p2.draw_puzzle(solved=True)
     # print(p2.laser_dir)
     # print(p2.laser_pos)
+
+    p3 = Puzzle('rat_9')
