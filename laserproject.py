@@ -1127,14 +1127,6 @@ class Puzzle:
                     ax.plot([x, x - 2 * rows * -x_dir],
                             [y, y - 2 * rows * -y_dir],
                             color="red", linewidth=2)
-                # elif solved is True:
-                #     if self.check_boundary(path[j]) is not True:
-                #         x_dir, y_dir = self.laser_dir[i]
-                #         ax.plot([x, x - 2 * rows * -x_dir],
-                #                 [y, y - 2 * rows * y_dir],
-                #                 color="red", linewidth=2)
-                #     else:
-                #         pass
 
         # Formatting.
         ax.set_xlim(-1, cols * 2 + 1)
